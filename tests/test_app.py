@@ -54,3 +54,28 @@ def test_filtered_exercise_save_and_empty_search(tmp_path, monkeypatch):
     at.text_input[0].set_value('없는종목').run()
     assert at.button[0].disabled
     assert at.dataframe and not at.exception
+
+def test_load_edit_delete_flow(tmp_path, monkeypatch):
+    path=tmp_path/'crud-ui.db'
+    monkeypatch.setenv('FITGUIDE_DB',str(path))
+    s=Store(path)
+    s.add_sets('2026-01-01','벤치프레스',40,8,2)
+    at=AppTest.from_file(APP).run()
+    at.sidebar.radio[0].set_value('운동 기록').run()
+    at.button(key='load_previous').click().run()
+    assert at.number_input(key='new_weight').value==40
+    assert at.number_input(key='new_reps').value==8
+    assert at.number_input(key='new_sets').value==2
+    assert len(s.records())==2  # Loading is not saving.
+    next(b for b in at.button if b.label=='운동 저장').click().run()
+    assert len(s.records())==4
+    selected=at.selectbox(key='edit_record').value
+    at.number_input(key=f'ew_{selected}').set_value(45.0)
+    next(b for b in at.button if b.label=='수정 저장').click().run()
+    assert not at.exception
+    assert next(r for r in s.records() if r['id']==selected)['weight']==45
+    assert at.button(key='delete_record').disabled
+    selected=at.selectbox(key='edit_record').value
+    at.checkbox(key=f'delete_confirm_{selected}').check().run()
+    at.button(key='delete_record').click().run()
+    assert not at.exception and len(s.records())==3

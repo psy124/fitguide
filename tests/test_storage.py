@@ -34,3 +34,23 @@ def test_future_date_rejected(tmp_path):
     s=Store(tmp_path/'test.db')
     with pytest.raises(ValueError):
         s.add_sets(date.today()+timedelta(days=1),'덤벨 컬',10,10,3)
+
+def test_update_delete_and_reopen(tmp_path):
+    path=tmp_path/'crud.db'
+    s=Store(path)
+    s.add_sets('2026-01-01','벤치프레스',40,10,3)
+    before=s.records()
+    target=before[0]['id']
+    with pytest.raises(ValueError):
+        s.update_set(target,'2026-01-01','벤치프레스',-1,10)
+    assert s.records()==before
+    s.update_set(target,'2026-01-02','스쿼트',50,8)
+    updated=Store(path).records()
+    assert updated[0]==dict(id=target,day='2026-01-02',exercise='스쿼트',weight=50.0,reps=8)
+    assert updated[1:]==before[1:]
+    s.delete_set(target)
+    assert Store(path).records()==before[1:]
+    with pytest.raises(ValueError):
+        s.delete_set(target)
+    with pytest.raises(ValueError):
+        s.update_set(target,'2026-01-02','스쿼트',50,8)

@@ -123,7 +123,8 @@ class Store:
             db.execute('INSERT INTO profile VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',
                        (json.dumps(p, ensure_ascii=False),))
 
-    def add_sets(self, day, exercise, weight, reps, sets):
+    @staticmethod
+    def validate_set(day, exercise, weight, reps, sets=1):
         try:
             parsed = date.fromisoformat(str(day))
         except ValueError:
@@ -136,9 +137,26 @@ class Store:
             raise ValueError('중량은 0~1000kg 범위여야 합니다.')
         if type(reps) is not int or not 1<=reps<=500 or type(sets) is not int or not 1<=sets<=30:
             raise ValueError('횟수는 1~500, 세트는 1~30 범위여야 합니다.')
+        return parsed.isoformat()
+
+    def add_sets(self, day, exercise, weight, reps, sets):
+        day = self.validate_set(day, exercise, weight, reps, sets)
         with self.connection() as db:
             db.executemany('INSERT INTO workout_sets(day,exercise,weight,reps) VALUES(?,?,?,?)',
-                           [(parsed.isoformat(), exercise, weight, reps)]*sets)
+                           [(day, exercise, weight, reps)]*sets)
+
+    def update_set(self, record_id, day, exercise, weight, reps):
+        day = self.validate_set(day, exercise, weight, reps)
+        with self.connection() as db:
+            result = db.execute('UPDATE workout_sets SET day=?,exercise=?,weight=?,reps=? WHERE id=?',
+                                (day, exercise, weight, reps, record_id))
+            if result.rowcount != 1:
+                raise ValueError('기록이 이미 삭제되었습니다. 목록을 새로고침하세요.')
+
+    def delete_set(self, record_id):
+        with self.connection() as db:
+            if db.execute('DELETE FROM workout_sets WHERE id=?', (record_id,)).rowcount != 1:
+                raise ValueError('기록이 이미 삭제되었습니다. 목록을 새로고침하세요.')
 
     def records(self):
         with self.connection() as db:
