@@ -14,6 +14,7 @@ def test_profile_and_workout_survive_new_session(tmp_path, monkeypatch):
     at=AppTest.from_file(APP).run()
     assert not at.exception
     switch_tab(at, '내 목표')
+    at.radio[0].set_value('특정 부위 집중').run()
     at.multiselect[0].set_value(['등','어깨'])
     at.number_input[0].set_value(4)
     at.button[0].click().run()
@@ -41,7 +42,7 @@ def test_empty_equipment_error(tmp_path,monkeypatch):
     monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'ui.db'))
     at=AppTest.from_file(APP).run()
     switch_tab(at, '내 목표')
-    at.multiselect[1].set_value([])
+    next(m for m in at.multiselect if m.label=='사용 가능한 기구').set_value([])
     at.button[0].click().run()
     assert at.error and not at.exception
 
@@ -127,3 +128,26 @@ def test_tab_draft_retention(tmp_path, monkeypatch):
     assert at.number_input(key='new_sets').value==4
     assert not at.exception
     assert Store(tmp_path/'draft.db').records()==[]
+
+def test_balanced_goal_and_existing_focus(tmp_path, monkeypatch):
+    path=tmp_path/'balanced.db'
+    monkeypatch.setenv('FITGUIDE_DB',str(path))
+    s=Store(path)
+    p=s.profile()
+    p['focus']=['등','어깨']
+    s.save_profile(p)
+    at=AppTest.from_file(APP).run()
+    switch_tab(at, '내 목표')
+    assert at.radio[0].value=='특정 부위 집중'
+    assert at.multiselect[0].value==['등','어깨']
+    at.radio[0].set_value('전신 균형').run()
+    assert all(m.label!='강조하고 싶은 부위 (최대 2개)' for m in at.multiselect)
+    at.button[0].click().run()
+    assert s.profile()['focus']==[]
+    fresh=AppTest.from_file(APP).run()
+    switch_tab(fresh,'내 목표')
+    assert fresh.radio[0].value=='전신 균형'
+    fresh.radio[0].set_value('특정 부위 집중').run()
+    fresh.button[0].click().run()
+    assert fresh.error and not fresh.exception
+    assert s.profile()['focus']==[]
