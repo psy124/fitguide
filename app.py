@@ -4,6 +4,9 @@ from datetime import date
 from pathlib import Path
 import streamlit as st
 from fitguide.storage import Store, GOALS, PARTS, LEVELS, EQUIPMENT, EXERCISES, find_exercises
+from fitguide.records import summarize_sets
+
+SUMMARY_COLUMNS = {'day':'날짜', 'exercise':'운동', 'weight':'중량 (kg)', 'reps':'세트당 횟수', 'sets':'세트 수'}
 
 st.set_page_config(page_title='FitGuide · 나의 운동 기록', page_icon='🏋️', layout='wide')
 store = Store(os.environ.get('FITGUIDE_DB', str(Path(__file__).parent/'data'/'fitguide.db')))
@@ -30,7 +33,7 @@ if page == '홈':
         st.info('아직 운동 기록이 없습니다. 첫 기록을 저장하면 이곳에 표시됩니다.')
     else:
         st.subheader('최근 기록')
-        st.dataframe(rows[:10], hide_index=True, column_config={'id':None, 'day':'날짜','exercise':'운동','weight':'중량 (kg)','reps':'횟수'})
+        st.dataframe(summarize_sets(rows)[:10], hide_index=True, column_config=SUMMARY_COLUMNS)
     st.caption('성장 그래프, 개인화 추천, 식사 가이드는 다음 개발 단계에서 추가합니다.')
 
 elif page == '내 목표':
@@ -78,9 +81,12 @@ else:
             except ValueError as exc:
                 st.error(str(exc))
     rows = store.records()
-    st.subheader('저장된 세트')
+    st.subheader('저장된 기록')
     if rows:
-        st.dataframe(rows, hide_index=True, column_config={'id':'기록 번호','day':'날짜','exercise':'운동','weight':'중량 (kg)','reps':'횟수'})
+        st.caption('같은 날짜·운동·중량·횟수의 기록을 한 줄로 묶었습니다. 같은 날 따로 저장한 세트도 합산합니다.')
+        st.dataframe(summarize_sets(rows), hide_index=True, column_config=SUMMARY_COLUMNS)
+        with st.expander('세트별 상세 기록 보기'):
+            st.dataframe(rows, hide_index=True, column_config={'id':'기록 번호','day':'날짜','exercise':'운동','weight':'중량 (kg)','reps':'횟수'})
     else:
         st.info('아직 저장된 기록이 없습니다.')
     st.caption('기록 수정·삭제·이전 기록 불러오기는 다음 단계에서 구현합니다.')

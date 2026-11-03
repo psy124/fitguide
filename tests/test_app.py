@@ -23,9 +23,13 @@ def test_profile_and_workout_survive_new_session(tmp_path, monkeypatch):
     fresh.button[0].click().run()
     assert fresh.success and not fresh.exception
     assert len(Store(path).records())==3
+    assert len(fresh.dataframe[0].value)==1
+    assert fresh.dataframe[0].value.iloc[0]['sets']==3
+    assert len(fresh.dataframe[1].value)==3
     final=AppTest.from_file(APP).run()
     assert final.metric[1].value=='1'
     assert final.metric[2].value=='3'
+    assert final.dataframe[0].value.iloc[0]['sets']==3
 
 def test_empty_equipment_error(tmp_path,monkeypatch):
     monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'ui.db'))
