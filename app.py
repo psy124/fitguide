@@ -47,9 +47,14 @@ with tabs[labels.index(page)]:
         st.title('내 목표')
         st.write('지속할 수 있는 운동 일정과 사용 가능한 기구를 알려주세요.')
         p = store.profile()
+        focus_mode = st.radio('발달 방향', ['전신 균형', '특정 부위 집중'],
+                              index=1 if p['focus'] else 0, horizontal=True)
+        if focus_mode == '전신 균형':
+            st.caption('특정 부위에 우선순위를 두지 않고 전체 루틴을 균형 있게 구성하는 목표입니다. 매번 전신 운동을 한다는 뜻은 아닙니다.')
         with st.form('profile'):
             goal = st.selectbox('운동 목표', GOALS, index=GOALS.index(p['goal']))
-            focus = st.multiselect('강조하고 싶은 부위 (최대 2개)', PARTS, default=p['focus'], max_selections=2)
+            focus = (st.multiselect('강조하고 싶은 부위 (최대 2개)', PARTS, default=p['focus'], max_selections=2)
+                     if focus_mode == '특정 부위 집중' else [])
             level = st.selectbox('운동 수준', LEVELS, index=LEVELS.index(p['level']))
             a,b = st.columns(2)
             days = a.number_input('주당 운동 횟수', 1, 7, p['days'])
@@ -57,6 +62,8 @@ with tabs[labels.index(page)]:
             equipment = st.multiselect('사용 가능한 기구', EQUIPMENT, default=p['equipment'])
             if st.form_submit_button('목표 저장', type='primary'):
                 try:
+                    if focus_mode == '특정 부위 집중' and not focus:
+                        raise ValueError('집중할 부위를 1~2개 선택하세요.')
                     store.save_profile(dict(goal=goal,focus=focus,level=level,days=days,minutes=minutes,equipment=equipment))
                     st.success('목표를 저장했습니다. 앱을 다시 열어도 유지됩니다.')
                 except ValueError as exc:
