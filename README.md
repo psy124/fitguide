@@ -5,7 +5,7 @@
 
 ## 상태
 
-2026-11-03: 요구사항과 개발 기록 체계 작성. 앱 구현 전이며 실행 가능한 앱은 아직 없습니다.
+2026-11-03: v0.1 구현. 홈 화면, 목표 저장·복원, 운동 세트 입력·조회가 가능합니다.
 GitHub 저장소: https://github.com/psy124/fitguide
 GitHub 접근 권한 확인 완료. 기능별 이슈 #1~#10을 등록했습니다.
 
@@ -16,6 +16,37 @@ GitHub 접근 권한 확인 완료. 기능별 이슈 #1~#10을 등록했습니�
 - pandas / Plotly: 집계와 그래프
 - Python 규칙·점수 기반 추천: 근거를 설명하고 재현 가능한 추천
 - pytest: 계산과 추천 제약 검증
+
+## 실행 (Windows PowerShell / Python 3.13)
+
+저장소 폴더에서 아래 명령을 실행하세요.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python -m streamlit run app.py
+```
+
+브라우저에서 http://localhost:8501 을 엽니다. 다음 실행부터는 `./run.ps1`도 사용할 수 있습니다.
+종료하려면 실행한 터미널에서 Ctrl+C를 누르세요.
+
+## 테스트
+
+```powershell
+.\.venv\Scripts\python -m pytest -q
+```
+
+실제 기록은 `data/fitguide.db`에 저장되며 Git에서 제외됩니다.
+테스트는 임시 DB만 사용합니다. `FITGUIDE_DB` 환경 변수로 저장 위치를 바꿀 수 있습니다.
+단일 사용자 로컬 앱이므로 공개 서버에 사용자 데이터와 함께 배포하지 마세요.
+
+## 현재 제한
+
+- 같은 중량·횟수의 세트를 일괄 입력합니다. 다른 값은 별도로 입력합니다.
+- 입력 저장 버튼을 다시 누르면 별도의 기록이 추가됩니다.
+- 수정·삭제·이전 기록 불러오기는 #3의 남은 작업입니다.
+- 그래프·개인화 추천·식사 가이드는 아직 구현하지 않았습니다.
+- 운동 종목은 초기 10개이며 후속 단계에서 확장합니다.
 
 ## 문서
 
