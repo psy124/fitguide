@@ -34,3 +34,19 @@ def test_empty_equipment_error(tmp_path,monkeypatch):
     at.multiselect[1].set_value([])
     at.button[0].click().run()
     assert at.error and not at.exception
+
+def test_filtered_exercise_save_and_empty_search(tmp_path, monkeypatch):
+    path=tmp_path/'catalog.db'
+    monkeypatch.setenv('FITGUIDE_DB',str(path))
+    at=AppTest.from_file(APP).run()
+    at.sidebar.radio[0].set_value('운동 기록').run()
+    at.selectbox[0].set_value('하체').run()
+    at.selectbox[1].set_value('덤벨').run()
+    at.text_input[0].set_value('고블릿스쿼트').run()
+    assert at.selectbox[2].options==['고블릿 스쿼트']
+    at.button[0].click().run()
+    assert not at.exception
+    assert {r['exercise'] for r in Store(path).records()}=={'고블릿 스쿼트'}
+    at.text_input[0].set_value('없는종목').run()
+    assert at.button[0].disabled
+    assert at.dataframe and not at.exception
