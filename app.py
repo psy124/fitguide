@@ -56,6 +56,8 @@ elif page == '내 목표':
                 st.error(str(exc))
 else:
     st.title('운동 기록')
+    if 'record_notice' in st.session_state:
+        st.success(st.session_state.pop('record_notice'))
     st.write('실제로 수행한 운동을 기록하세요. 맨몸 운동의 추가 중량은 0kg으로 입력합니다.')
     with st.container(border=True):
         st.subheader('1. 운동 종목 선택')
@@ -71,14 +73,28 @@ else:
         else:
             st.info('조건에 맞는 운동이 없습니다. 검색어나 필터를 바꿔주세요.')
         st.caption('부위는 기록 분류용 대표 부위입니다. 맨몸 분류도 철봉·지지대 등이 필요할 수 있습니다.')
+    previous = [r for r in summarize_sets(store.records()) if r['exercise'] == exercise]
+    if previous:
+        with st.expander('이전 기록 불러오기'):
+            source = st.selectbox('불러올 기록', range(len(previous)),
+                format_func=lambda i: f"{previous[i]['day']} · {previous[i]['weight']:g}kg · {previous[i]['reps']}회 · {previous[i]['sets']}세트",
+                key=f'previous_{exercise}')
+            if st.button('입력칸에 불러오기', key='load_previous'):
+                old = previous[source]
+                st.session_state['new_weight'] = float(old['weight'])
+                st.session_state['new_reps'] = old['reps']
+                st.session_state['new_sets'] = min(old['sets'], 30)
+                st.success('중량·횟수·세트를 불러왔습니다. 날짜를 확인하고 운동 저장을 눌러주세요.')
+                if old['sets'] > 30:
+                    st.info('한 번에 입력할 수 있는 30세트까지 불러왔습니다.')
     with st.form('workout', clear_on_submit=False):
         st.subheader('2. 수행 기록 입력')
         st.write(f'선택한 운동: **{exercise}**' if exercise else '위에서 운동 종목을 선택하세요.')
         day = st.date_input('운동 날짜', date.today(), max_value=date.today())
         a,b,c = st.columns(3)
-        weight = a.number_input('중량 (kg)', 0.0, 1000.0, 0.0, 0.5)
-        reps = b.number_input('세트당 횟수', 1, 500, 10)
-        sets = c.number_input('세트 수', 1, 30, 3)
+        weight = a.number_input('중량 (kg)', 0.0, 1000.0, 0.0, 0.5, key='new_weight')
+        reps = b.number_input('세트당 횟수', 1, 500, 10, key='new_reps')
+        sets = c.number_input('세트 수', 1, 30, 3, key='new_sets')
         st.caption('덤벨은 한 손 기준, 바벨은 봉 포함 총중량으로 일관되게 기록하세요.')
         st.caption('입력한 중량·횟수를 각 세트에 동일하게 저장합니다. 세트별 값이 다르면 나누어 입력하세요.')
         if st.form_submit_button('운동 저장', type='primary', disabled=not choices):
@@ -94,6 +110,31 @@ else:
         st.dataframe(summarize_sets(rows), hide_index=True, column_config=SUMMARY_COLUMNS)
         with st.expander('세트별 상세 기록 보기'):
             st.dataframe(rows, hide_index=True, column_config={'id':'기록 번호','day':'날짜','exercise':'운동','weight':'중량 (kg)','reps':'횟수'})
+        with st.expander('기록 수정·삭제'):
+            st.caption('선택한 개별 세트 1개만 변경합니다. 수정 후 요약의 세트 수가 자동으로 다시 계산됩니다.')
+            by_id = {r['id']: r for r in rows}
+            selected = st.selectbox('변경할 세트', list(by_id), key='edit_record',
+                format_func=lambda i: f"#{i} · {by_id[i]['day']} · {by_id[i]['exercise']} · {by_id[i]['weight']:g}kg × {by_id[i]['reps']}회")
+            row = by_id[selected]
+            with st.form(f'edit_{selected}'):
+                edit_day = st.date_input('수정 날짜', date.fromisoformat(row['day']), max_value=date.today(), key=f'ed_{selected}')
+                edit_exercise = st.selectbox('수정 운동', list(EXERCISES), index=list(EXERCISES).index(row['exercise']), key=f'ee_{selected}')
+                edit_weight = st.number_input('수정 중량 (kg)', 0.0, 1000.0, float(row['weight']), 0.5, key=f'ew_{selected}')
+                edit_reps = st.number_input('수정 횟수', 1, 500, row['reps'], key=f'er_{selected}')
+                if st.form_submit_button('수정 저장'):
+                    try:
+                        store.update_set(selected, edit_day, edit_exercise, edit_weight, edit_reps)
+                        st.session_state['record_notice'] = '선택한 세트를 수정했습니다.'
+                        st.rerun()
+                    except ValueError as exc:
+                        st.error(str(exc))
+            confirm = st.checkbox('선택한 세트 1개를 영구 삭제합니다.', key=f'delete_confirm_{selected}')
+            if st.button('선택한 세트 삭제', disabled=not confirm, key='delete_record'):
+                try:
+                    store.delete_set(selected)
+                    st.session_state['record_notice'] = '선택한 세트를 삭제했습니다.'
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(str(exc))
     else:
         st.info('아직 저장된 기록이 없습니다.')
-    st.caption('기록 수정·삭제·이전 기록 불러오기는 다음 단계에서 구현합니다.')
