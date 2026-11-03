@@ -12,7 +12,10 @@ st.set_page_config(page_title='FitGuide · 나의 운동 기록', page_icon='�
 store = Store(os.environ.get('FITGUIDE_DB', str(Path(__file__).parent/'data'/'fitguide.db')))
 st.sidebar.title('FitGuide')
 st.sidebar.caption('기록에서 시작하는 나의 변화')
-page = st.sidebar.radio('메뉴', ['홈', '내 목표', '운동 기록'])
+page = st.sidebar.radio('메뉴', ['홈', '내 목표', '운동 기록', '기록 내역'], key='page')
+
+def show_history():
+    st.session_state['page'] = '기록 내역'
 st.sidebar.divider()
 st.sidebar.caption('졸업작품 v0.1 · 개인용 로컬 앱')
 st.sidebar.caption('현재 목표 저장과 운동 기록 입력을 지원합니다.')
@@ -54,27 +57,40 @@ elif page == '내 목표':
                 st.success('목표를 저장했습니다. 앱을 다시 열어도 유지됩니다.')
             except ValueError as exc:
                 st.error(str(exc))
-else:
+elif page == '운동 기록':
     st.title('운동 기록')
     if 'record_notice' in st.session_state:
         st.success(st.session_state.pop('record_notice'))
     st.write('실제로 수행한 운동을 기록하세요. 맨몸 운동의 추가 중량은 0kg으로 입력합니다.')
-    with st.container(border=True):
-        st.subheader('1. 운동 종목 선택')
+    exercise = st.session_state.get('selected_exercise', '벤치프레스')
+    body, equipment = EXERCISES[exercise]
+    st.subheader(exercise)
+    st.caption(f'{body} · {equipment}')
+    if st.button('운동 변경', key='change_exercise'):
+        st.session_state['choosing_exercise'] = not st.session_state.get('choosing_exercise', False)
+    if st.session_state.get('choosing_exercise', False):
         a, b = st.columns(2)
         part = a.selectbox('부위', ['전체'] + PARTS)
         gear = b.selectbox('기구', ['전체'] + EQUIPMENT)
         query = st.text_input('운동 이름 검색', placeholder='예: 덤벨, 로우, 스쿼트')
         choices = find_exercises(part, gear, query)
-        exercise = st.selectbox('운동 종목', choices, disabled=not choices)
-        if exercise:
-            body, equipment = EXERCISES[exercise]
+        candidate = st.selectbox('운동 종목', choices, disabled=not choices)
+        if candidate:
+            body, equipment = EXERCISES[candidate]
             st.caption(f'{body} · {equipment} | 조건에 맞는 운동 {len(choices)}개')
         else:
             st.info('조건에 맞는 운동이 없습니다. 검색어나 필터를 바꿔주세요.')
         st.caption('부위는 기록 분류용 대표 부위입니다. 맨몸 분류도 철봉·지지대 등이 필요할 수 있습니다.')
+        if st.button('이 운동 선택', disabled=not candidate, key='confirm_exercise'):
+            st.session_state['selected_exercise'] = candidate
+            st.session_state['choosing_exercise'] = False
+            for key in ('new_weight', 'new_reps', 'new_sets'):
+                st.session_state.pop(key, None)
+            st.rerun()
     previous = [r for r in summarize_sets(store.records()) if r['exercise'] == exercise]
     if previous:
+        latest = previous[0]
+        st.caption(f"최근 기록 · {latest['day']} · {latest['weight']:g}kg × {latest['reps']}회 × {latest['sets']}세트")
         with st.expander('이전 기록 불러오기'):
             source = st.selectbox('불러올 기록', range(len(previous)),
                 format_func=lambda i: f"{previous[i]['day']} · {previous[i]['weight']:g}kg · {previous[i]['reps']}회 · {previous[i]['sets']}세트",
@@ -88,8 +104,6 @@ else:
                 if old['sets'] > 30:
                     st.info('한 번에 입력할 수 있는 30세트까지 불러왔습니다.')
     with st.form('workout', clear_on_submit=False):
-        st.subheader('2. 수행 기록 입력')
-        st.write(f'선택한 운동: **{exercise}**' if exercise else '위에서 운동 종목을 선택하세요.')
         day = st.date_input('운동 날짜', date.today(), max_value=date.today())
         a,b,c = st.columns(3)
         weight = a.number_input('중량 (kg)', 0.0, 1000.0, 0.0, 0.5, key='new_weight')
@@ -97,22 +111,31 @@ else:
         sets = c.number_input('세트 수', 1, 30, 3, key='new_sets')
         st.caption('덤벨은 한 손 기준, 바벨은 봉 포함 총중량으로 일관되게 기록하세요.')
         st.caption('입력한 중량·횟수를 각 세트에 동일하게 저장합니다. 세트별 값이 다르면 나누어 입력하세요.')
-        if st.form_submit_button('운동 저장', type='primary', disabled=not choices):
+        if st.form_submit_button('운동 저장', type='primary', disabled=st.session_state.get('choosing_exercise', False)):
             try:
                 store.add_sets(day, exercise, weight, reps, sets)
                 st.success(f'{exercise} {sets}세트를 저장했습니다.')
             except ValueError as exc:
                 st.error(str(exc))
+    st.button('기록 내역 보기', on_click=show_history)
+else:
+    st.title('기록 내역')
+    if 'record_notice' in st.session_state:
+        st.success(st.session_state.pop('record_notice'))
     rows = store.records()
-    st.subheader('저장된 기록')
+    days = sorted({r['day'] for r in rows}, reverse=True)
+    chosen_day = st.selectbox('날짜', ['전체'] + days)
+    rows = [r for r in rows if chosen_day == '전체' or r['day'] == chosen_day]
     if rows:
         st.caption('같은 날짜·운동·중량·횟수의 기록을 한 줄로 묶었습니다. 같은 날 따로 저장한 세트도 합산합니다.')
         st.dataframe(summarize_sets(rows), hide_index=True, column_config=SUMMARY_COLUMNS)
-        with st.expander('세트별 상세 기록 보기'):
-            st.dataframe(rows, hide_index=True, column_config={'id':'기록 번호','day':'날짜','exercise':'운동','weight':'중량 (kg)','reps':'횟수'})
-        with st.expander('기록 수정·삭제'):
+        groups = list(dict.fromkeys((r['day'], r['exercise']) for r in rows))
+        group = st.selectbox('상세 확인할 운동', groups, format_func=lambda g: f'{g[0]} · {g[1]}', key='history_group')
+        detail_rows = [r for r in rows if (r['day'], r['exercise']) == group]
+        with st.expander('상세 보기 · 수정·삭제'):
+            st.dataframe(detail_rows, hide_index=True, column_config={'id':'기록 번호','day':'날짜','exercise':'운동','weight':'중량 (kg)','reps':'횟수'})
             st.caption('선택한 개별 세트 1개만 변경합니다. 수정 후 요약의 세트 수가 자동으로 다시 계산됩니다.')
-            by_id = {r['id']: r for r in rows}
+            by_id = {r['id']: r for r in detail_rows}
             selected = st.selectbox('변경할 세트', list(by_id), key='edit_record',
                 format_func=lambda i: f"#{i} · {by_id[i]['day']} · {by_id[i]['exercise']} · {by_id[i]['weight']:g}kg × {by_id[i]['reps']}회")
             row = by_id[selected]
