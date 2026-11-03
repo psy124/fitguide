@@ -2,6 +2,10 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 from fitguide.storage import Store
 
+def switch_tab(at, label):
+    at.session_state['page'] = label
+    at.run()
+
 APP = str(Path(__file__).resolve().parents[1]/'app.py')
 
 def test_profile_and_workout_survive_new_session(tmp_path, monkeypatch):
@@ -9,16 +13,16 @@ def test_profile_and_workout_survive_new_session(tmp_path, monkeypatch):
     monkeypatch.setenv('FITGUIDE_DB',str(path))
     at=AppTest.from_file(APP).run()
     assert not at.exception
-    at.sidebar.radio[0].set_value('내 목표').run()
+    switch_tab(at, '내 목표')
     at.multiselect[0].set_value(['등','어깨'])
     at.number_input[0].set_value(4)
     at.button[0].click().run()
     assert at.success and not at.exception
     fresh=AppTest.from_file(APP).run()
-    fresh.sidebar.radio[0].set_value('내 목표').run()
+    switch_tab(fresh, '내 목표')
     assert fresh.multiselect[0].value==['등','어깨']
     assert fresh.number_input[0].value==4
-    fresh.sidebar.radio[0].set_value('운동 기록').run()
+    switch_tab(fresh, '운동 기록')
     fresh.number_input[0].set_value(20.0)
     next(b for b in fresh.button if b.label=='운동 저장').click().run()
     assert fresh.success and not fresh.exception
@@ -36,7 +40,7 @@ def test_profile_and_workout_survive_new_session(tmp_path, monkeypatch):
 def test_empty_equipment_error(tmp_path,monkeypatch):
     monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'ui.db'))
     at=AppTest.from_file(APP).run()
-    at.sidebar.radio[0].set_value('내 목표').run()
+    switch_tab(at, '내 목표')
     at.multiselect[1].set_value([])
     at.button[0].click().run()
     assert at.error and not at.exception
@@ -45,7 +49,7 @@ def test_filtered_exercise_save_and_empty_search(tmp_path, monkeypatch):
     path=tmp_path/'catalog.db'
     monkeypatch.setenv('FITGUIDE_DB',str(path))
     at=AppTest.from_file(APP).run()
-    at.sidebar.radio[0].set_value('운동 기록').run()
+    switch_tab(at, '운동 기록')
     assert not at.selectbox
     at.button(key='change_exercise').click().run()
     at.selectbox[0].set_value('하체').run()
@@ -69,7 +73,7 @@ def test_load_edit_delete_flow(tmp_path, monkeypatch):
     s=Store(path)
     s.add_sets('2026-01-01','벤치프레스',40,8,2)
     at=AppTest.from_file(APP).run()
-    at.sidebar.radio[0].set_value('운동 기록').run()
+    switch_tab(at, '운동 기록')
     at.button(key='load_previous').click().run()
     assert at.number_input(key='new_weight').value==40
     assert at.number_input(key='new_reps').value==8
@@ -77,7 +81,7 @@ def test_load_edit_delete_flow(tmp_path, monkeypatch):
     assert len(s.records())==2  # Loading is not saving.
     next(b for b in at.button if b.label=='운동 저장').click().run()
     assert len(s.records())==4
-    at.sidebar.radio[0].set_value('기록 내역').run()
+    switch_tab(at, '기록 내역')
     selected=at.selectbox(key='edit_record').value
     at.number_input(key=f'ew_{selected}').set_value(45.0)
     next(b for b in at.button if b.label=='수정 저장').click().run()
@@ -93,7 +97,7 @@ def test_history_date_filter_and_empty_state(tmp_path, monkeypatch):
     path=tmp_path/'history.db'
     monkeypatch.setenv('FITGUIDE_DB',str(path))
     at=AppTest.from_file(APP).run()
-    at.sidebar.radio[0].set_value('기록 내역').run()
+    switch_tab(at, '기록 내역')
     assert at.info and not at.exception
     s=Store(path)
     s.add_sets('2026-01-01','벤치프레스',40,10,2)
@@ -103,3 +107,23 @@ def test_history_date_filter_and_empty_state(tmp_path, monkeypatch):
     assert len(at.dataframe[0].value)==1
     assert at.dataframe[0].value.iloc[0]['exercise']=='벤치프레스'
     assert len(at.dataframe[1].value)==2
+
+
+def test_tab_draft_retention(tmp_path, monkeypatch):
+    monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'draft.db'))
+    at=AppTest.from_file(APP).run()
+    assert [t.label for t in at.tabs]==['홈','내 목표','운동 기록','기록 내역']
+    assert not at.sidebar.radio
+    switch_tab(at, '운동 기록')
+    at.number_input(key='new_weight').set_value(37.5).run()
+    at.number_input(key='new_reps').set_value(12).run()
+    at.number_input(key='new_sets').set_value(4).run()
+    switch_tab(at, '기록 내역')
+    assert not at.number_input
+    switch_tab(at, '홈')
+    switch_tab(at, '운동 기록')
+    assert at.number_input(key='new_weight').value==37.5
+    assert at.number_input(key='new_reps').value==12
+    assert at.number_input(key='new_sets').value==4
+    assert not at.exception
+    assert Store(tmp_path/'draft.db').records()==[]
