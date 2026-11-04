@@ -61,11 +61,16 @@ with tabs[labels.index(page)]:
             days = a.number_input('주당 운동 횟수', 1, 7, p['days'])
             minutes = b.number_input('회당 운동 시간 (분)', 10, 180, p['minutes'])
             equipment = st.multiselect('사용 가능한 기구', EQUIPMENT, default=p['equipment'])
+            st.caption('신체 정보 (선택) · 빈칸으로 저장하면 해당 값을 지웁니다.')
+            a,b = st.columns(2)
+            height = a.number_input('키 (cm)', 50.0, 250.0, value=p.get('height_cm'), step=0.1, key='profile_height')
+            target = b.number_input('목표 체중 (kg)', 1.0, 500.0, value=p.get('target_weight'), step=0.1, key='profile_target')
+            st.caption('측정 체중은 분석 탭에서 날짜별로 기록하세요.')
             if st.form_submit_button('목표 저장', type='primary'):
                 try:
                     if focus_mode == '특정 부위 집중' and not focus:
                         raise ValueError('집중할 부위를 1~2개 선택하세요.')
-                    store.save_profile(dict(goal=goal,focus=focus,level=level,days=days,minutes=minutes,equipment=equipment))
+                    store.save_profile(dict(goal=goal,focus=focus,level=level,days=days,minutes=minutes,equipment=equipment,height_cm=height,target_weight=target))
                     st.success('목표를 저장했습니다. 앱을 다시 열어도 유지됩니다.')
                 except ValueError as exc:
                     st.error(str(exc))

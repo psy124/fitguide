@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
-from .analytics import analyze, exercise_trend
+from .analytics import analyze, exercise_trend, body_summary
 
 def render_analysis(store):
     st.title('운동 분석')
@@ -74,7 +74,25 @@ def render_analysis(store):
             if st.button('체중 삭제',disabled=not confirm):
                 store.delete_body_weight(delete_day)
                 st.rerun()
-    weights=[{'날짜':r['day'],'체중 (kg)':r['weight']} for r in store.body_weights() if start.isoformat()<=r['day']<=end.isoformat()]
+    summary = body_summary(store.body_weights(),store.profile(),start,end)
+    a,b,c = st.columns(3)
+    latest = summary['latest']
+    a.metric('최근 체중', f"{latest['weight']:g} kg" if latest else '미입력')
+    if latest:
+        a.caption(f"측정일 {latest['day']} · 기간 필터와 관계없는 최신 기록")
+    b.metric('키', f"{summary['height']:g} cm" if summary['height'] else '미입력')
+    c.metric('BMI (참고)', f"{summary['bmi']:.1f}" if summary['bmi'] is not None else '—')
+    st.caption('BMI = 체중(kg) ÷ 키(m)². 근육량과 체지방을 구분하지 않는 참고 수치입니다. 건강 상태나 적절한 목표 체중을 판정하지 않습니다.')
+    a,b,c = st.columns(3)
+    a.metric('기간 내 체중 변화', f"{summary['change']:+.1f} kg" if summary['change'] is not None else '—')
+    if summary['change'] is not None:
+        a.caption(f"{summary['period'][0]['day']} → {summary['period'][-1]['day']}")
+    else:
+        a.caption('선택 기간에 서로 다른 날짜의 기록이 2개 이상 필요합니다.')
+    b.metric('목표 체중', f"{summary['target']:g} kg" if summary['target'] is not None else '미설정')
+    c.metric('최근 체중 − 목표 체중', f"{summary['gap']:+.1f} kg" if summary['gap'] is not None else '—')
+    st.caption('키와 목표 체중은 내 목표 탭에서 입력·수정할 수 있습니다.')
+    weights=[{'날짜':r['day'],'체중 (kg)':r['weight']} for r in summary['period']]
     if weights:
         frame=pd.DataFrame(weights).set_index('날짜')
         st.line_chart(frame, y='체중 (kg)')
