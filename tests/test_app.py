@@ -164,7 +164,7 @@ def test_analysis_view(tmp_path, monkeypatch):
     s.add_sets('2026-01-02','벤치프레스',45,8,2)
     at.selectbox(key='analysis_period').set_value('전체').run()
     assert not at.exception
-    assert [m.value for m in at.metric]==['2','5','1']
+    assert [m.value for m in at.metric][:3]==['2','5','1']
     assert len(at.get('vega_lite_chart'))>=4
     next(b for b in at.button if b.label=='체중 저장').click().run()
     assert s.body_weights() and not at.exception

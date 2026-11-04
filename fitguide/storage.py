@@ -121,6 +121,10 @@ class Store:
             raise ValueError('운동 횟수는 주 1~7회입니다.')
         if type(p.get('minutes')) is not int or not 10<=p['minutes']<=180:
             raise ValueError('운동 시간은 10~180분입니다.')
+        for field, low, high, label in [('height_cm',50,250,'키'),('target_weight',1,500,'목표 체중')]:
+            value = p.get(field)
+            if value is not None and (type(value) not in (int,float) or not math.isfinite(value) or not low<=value<=high):
+                raise ValueError(f'{label} 입력 범위를 확인하세요 ({low}~{high}).')
         with self.connection() as db:
             db.execute('INSERT INTO profile VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',
                        (json.dumps(p, ensure_ascii=False),))

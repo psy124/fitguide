@@ -1,6 +1,7 @@
 from datetime import date
 import pytest
 from fitguide.analytics import analyze, exercise_trend
+from fitguide.analytics import body_summary
 from fitguide.storage import Store
 
 def test_aggregation_boundaries_and_empty_weeks():
@@ -33,3 +34,27 @@ def test_weight_upsert_validation_and_delete(tmp_path):
             s.save_body_weight('2026-01-01',value)
     s.delete_body_weight('2026-01-01')
     assert s.body_weights()==[]
+
+def test_body_summary_period_and_latest():
+    rows=[{'day':'2026-01-01','weight':80},{'day':'2026-01-02','weight':79}, {'day':'2026-02-01','weight':78}]
+    result=body_summary(rows,{'height_cm':200,'target_weight':75},date(2026,1,1),date(2026,1,31))
+    assert result['bmi']==19.5
+    assert result['gap']==3
+    assert result['change']==-1
+    assert result['latest']['day']=='2026-02-01'
+    empty=body_summary([],{},date(2026,1,1),date(2026,1,31))
+    assert empty['bmi'] is None and empty['gap'] is None and empty['change'] is None
+
+def test_optional_profile_measurements(tmp_path):
+    s=Store(tmp_path/'profile.db')
+    old=s.profile()
+    s.save_profile(old)
+    assert s.profile()==old
+    p=old | {'height_cm':175.0,'target_weight':70.0}
+    s.save_profile(p)
+    assert Store(s.path).profile()==p
+    for value in [0,float('nan'),251]:
+        with pytest.raises(ValueError):
+            s.save_profile(p | {'height_cm':value})
+    s.save_profile(p | {'height_cm':None,'target_weight':None})
+    assert s.profile()['height_cm'] is None
