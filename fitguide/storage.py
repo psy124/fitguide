@@ -91,7 +91,9 @@ class Store:
                     weight REAL NOT NULL CHECK(weight>=0), reps INTEGER NOT NULL CHECK(reps>0));
                 CREATE TABLE IF NOT EXISTS body_weights (
                     day TEXT PRIMARY KEY, weight REAL NOT NULL CHECK(weight>0));
-                PRAGMA user_version=1;
+                CREATE TABLE IF NOT EXISTS workout_draft (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS routines (name TEXT PRIMARY KEY, payload TEXT NOT NULL);
+                PRAGMA user_version=2;
             ''')
 
     @contextmanager
@@ -186,3 +188,72 @@ class Store:
     def delete_body_weight(self, day):
         with self.connection() as db:
             db.execute('DELETE FROM body_weights WHERE day=?', (day,))
+
+    def draft(self):
+        with self.connection() as db:
+            row = db.execute('SELECT payload FROM workout_draft WHERE id=1').fetchone()
+        return json.loads(row[0]) if row else None
+
+    def save_draft(self, draft):
+        self.validate_workout(draft)
+        with self.connection() as db:
+            db.execute('INSERT INTO workout_draft VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',
+                       (json.dumps(draft, ensure_ascii=False),))
+
+    @staticmethod
+    def validate_workout(draft):
+        if not draft.get('id'):
+            raise ValueError('운동 식별자가 없습니다.')
+        if date.fromisoformat(draft['day']) > date.today():
+            raise ValueError('미래 날짜는 선택할 수 없습니다.')
+        for exercise in draft['exercises']:
+            if not 1 <= len(exercise['sets']) <= 30:
+                raise ValueError('종목당 1~30세트를 입력하세요.')
+            for row in exercise['sets']:
+                Store.validate_set(draft['day'], exercise['name'], row['weight'], row['reps'])
+                if type(row['done']) is not bool:
+                    raise ValueError('완료 상태를 확인하세요.')
+
+    def finish_workout(self, draft_id):
+        # Reading, inserting and deleting share a write transaction: retries cannot duplicate sets.
+        with self.connection() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT payload FROM workout_draft WHERE id=1').fetchone()
+            if not row or json.loads(row[0])['id'] != draft_id:
+                raise ValueError('이미 종료되었거나 다른 운동입니다. 새로고침하세요.')
+            draft = json.loads(row[0])
+            self.validate_workout(draft)
+            rows = [(draft['day'], e['name'], r['weight'], r['reps'])
+                    for e in draft['exercises'] for r in e['sets'] if r['done']]
+            if not rows:
+                raise ValueError('완료한 세트를 하나 이상 체크하세요.')
+            db.executemany('INSERT INTO workout_sets(day,exercise,weight,reps) VALUES(?,?,?,?)', rows)
+            db.execute('DELETE FROM workout_draft WHERE id=1')
+        return len(rows)
+
+    def discard_workout(self, draft_id):
+        with self.connection() as db:
+            row = db.execute('SELECT payload FROM workout_draft WHERE id=1').fetchone()
+            if row and json.loads(row[0])['id'] == draft_id:
+                db.execute('DELETE FROM workout_draft WHERE id=1')
+
+    def routines(self):
+        with self.connection() as db:
+            return {r['name']: json.loads(r['payload']) for r in db.execute('SELECT * FROM routines ORDER BY name')}
+
+    def save_routine(self, name, draft):
+        self.validate_workout(draft)
+        name = name.strip()
+        if not name or len(name) > 50 or not draft['exercises']:
+            raise ValueError('운동을 추가하고 루틴 이름을 1~50자로 입력하세요.')
+        exercises = [{'name': e['name'], 'sets': [{'weight': r['weight'], 'reps': r['reps']} for r in e['sets']]}
+                     for e in draft['exercises']]
+        with self.connection() as db:
+            try:
+                db.execute('INSERT INTO routines VALUES(?,?)', (name, json.dumps(exercises, ensure_ascii=False)))
+            except sqlite3.IntegrityError:
+                raise ValueError('같은 이름의 루틴이 있습니다. 다른 이름으로 저장하세요.') from None
+
+    def delete_routine(self, name):
+        with self.connection() as db:
+            db.execute('DELETE FROM routines WHERE name=?', (name,))
