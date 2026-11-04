@@ -5,6 +5,7 @@ from pathlib import Path
 import streamlit as st
 from fitguide.storage import Store, GOALS, PARTS, LEVELS, EQUIPMENT, EXERCISES, find_exercises
 from fitguide.records import summarize_sets
+from fitguide.analysis_view import render_analysis
 
 SUMMARY_COLUMNS = {'day':'날짜', 'exercise':'운동', 'weight':'중량 (kg)', 'reps':'세트당 횟수', 'sets':'세트 수'}
 
@@ -16,7 +17,7 @@ for draft_key in ('new_day', 'new_weight', 'new_reps', 'new_sets'):
         st.session_state[draft_key] = st.session_state[draft_key]
 st.title('FitGuide')
 st.caption('기록에서 시작하는 나의 변화')
-labels = ['홈', '내 목표', '운동 기록', '기록 내역']
+labels = ['홈', '내 목표', '운동 기록', '기록 내역', '분석']
 tabs = st.tabs(labels, key='page', on_change='rerun')
 page = st.session_state['page']
 
@@ -41,7 +42,7 @@ with tabs[labels.index(page)]:
         else:
             st.subheader('최근 기록')
             st.dataframe(summarize_sets(rows)[:10], hide_index=True, column_config=SUMMARY_COLUMNS)
-        st.caption('성장 그래프, 개인화 추천, 식사 가이드는 다음 개발 단계에서 추가합니다.')
+        st.caption('분석 탭에서 운동 기록의 변화를 확인하세요. 개인화 추천과 식사 가이드는 다음 단계에서 추가합니다.')
 
     elif page == '내 목표':
         st.title('내 목표')
@@ -129,6 +130,8 @@ with tabs[labels.index(page)]:
                 except ValueError as exc:
                     st.error(str(exc))
         st.button('기록 내역 보기', on_click=show_history)
+    elif page == '분석':
+        render_analysis(store)
     else:
         st.title('기록 내역')
         if 'record_notice' in st.session_state:
