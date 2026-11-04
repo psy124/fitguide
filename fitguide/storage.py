@@ -114,6 +114,9 @@ class Store:
     def save_profile(self, p):
         if p.get('goal') not in GOALS or p.get('level') not in LEVELS:
             raise ValueError('목표와 운동 수준을 확인하세요.')
+        excluded = p.get('excluded_exercises', [])
+        if not isinstance(excluded, list) or any(name not in EXERCISES for name in excluded):
+            raise ValueError('제외 종목은 운동 목록에서 선택하세요.')
         focus, equipment = p.get('focus', []), p.get('equipment', [])
         if len(focus)>2 or len(set(focus))!=len(focus) or not set(focus)<=set(PARTS):
             raise ValueError('강조 부위는 서로 다른 부위 최대 2개를 선택하세요.')
