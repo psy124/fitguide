@@ -113,7 +113,7 @@ def test_history_date_filter_and_empty_state(tmp_path, monkeypatch):
 def test_tab_draft_retention(tmp_path, monkeypatch):
     monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'draft.db'))
     at=AppTest.from_file(APP).run()
-    assert [t.label for t in at.tabs]==['홈','내 목표','운동 기록','기록 내역']
+    assert [t.label for t in at.tabs]==['홈','내 목표','운동 기록','기록 내역','분석']
     assert not at.sidebar.radio
     switch_tab(at, '운동 기록')
     at.number_input(key='new_weight').set_value(37.5).run()
@@ -144,6 +144,7 @@ def test_balanced_goal_and_existing_focus(tmp_path, monkeypatch):
     assert all(m.label!='강조하고 싶은 부위 (최대 2개)' for m in at.multiselect)
     at.button[0].click().run()
     assert s.profile()['focus']==[]
+
     fresh=AppTest.from_file(APP).run()
     switch_tab(fresh,'내 목표')
     assert fresh.radio[0].value=='전신 균형'
@@ -151,3 +152,24 @@ def test_balanced_goal_and_existing_focus(tmp_path, monkeypatch):
     fresh.button[0].click().run()
     assert fresh.error and not fresh.exception
     assert s.profile()['focus']==[]
+
+def test_analysis_view(tmp_path, monkeypatch):
+    path=tmp_path/'analysis-ui.db'
+    monkeypatch.setenv('FITGUIDE_DB',str(path))
+    at=AppTest.from_file(APP).run()
+    switch_tab(at,'분석')
+    assert at.info and not at.exception
+    s=Store(path)
+    s.add_sets('2026-01-01','벤치프레스',40,10,3)
+    s.add_sets('2026-01-02','벤치프레스',45,8,2)
+    at.selectbox(key='analysis_period').set_value('전체').run()
+    assert not at.exception
+    assert [m.value for m in at.metric]==['2','5','1']
+    assert len(at.get('vega_lite_chart'))>=4
+    next(b for b in at.button if b.label=='체중 저장').click().run()
+    assert s.body_weights() and not at.exception
+    at.selectbox(key='analysis_period').set_value('직접 선택').run()
+    from datetime import date
+    at.date_input(key='analysis_start').set_value(date(2026,1,3))
+    at.date_input(key='analysis_end').set_value(date(2026,1,2)).run()
+    assert at.error and not at.exception

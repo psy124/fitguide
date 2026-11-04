@@ -89,6 +89,8 @@ class Store:
                 CREATE TABLE IF NOT EXISTS workout_sets (
                     id INTEGER PRIMARY KEY, day TEXT NOT NULL, exercise TEXT NOT NULL,
                     weight REAL NOT NULL CHECK(weight>=0), reps INTEGER NOT NULL CHECK(reps>0));
+                CREATE TABLE IF NOT EXISTS body_weights (
+                    day TEXT PRIMARY KEY, weight REAL NOT NULL CHECK(weight>0));
                 PRAGMA user_version=1;
             ''')
 
@@ -161,3 +163,22 @@ class Store:
     def records(self):
         with self.connection() as db:
             return [dict(r) for r in db.execute('SELECT * FROM workout_sets ORDER BY day DESC,id DESC')]
+
+    def save_body_weight(self, day, weight):
+        try:
+            parsed = date.fromisoformat(str(day))
+        except ValueError:
+            raise ValueError('측정 날짜를 확인하세요.') from None
+        if parsed > date.today() or not isinstance(weight, (int, float)) or not math.isfinite(weight) or not 1 <= weight <= 500:
+            raise ValueError('오늘 이전 날짜와 1~500kg 범위의 체중을 입력하세요.')
+        with self.connection() as db:
+            db.execute('INSERT INTO body_weights VALUES(?,?) ON CONFLICT(day) DO UPDATE SET weight=excluded.weight',
+                       (parsed.isoformat(), weight))
+
+    def body_weights(self):
+        with self.connection() as db:
+            return [dict(r) for r in db.execute('SELECT * FROM body_weights ORDER BY day')]
+
+    def delete_body_weight(self, day):
+        with self.connection() as db:
+            db.execute('DELETE FROM body_weights WHERE day=?', (day,))
