@@ -7,13 +7,14 @@ from fitguide.storage import Store, GOALS, PARTS, LEVELS, EQUIPMENT, EXERCISES
 from fitguide.records import summarize_sets
 from fitguide.analysis_view import render_analysis
 from fitguide.workout_view import render_workout
+from fitguide.demo import select_store
 
 SUMMARY_COLUMNS = {'day':'날짜', 'exercise':'운동', 'weight':'중량 (kg)', 'reps':'세트당 횟수', 'sets':'세트 수'}
 
 st.set_page_config(page_title='FitGuide · 나의 운동 기록', page_icon='🏋️', layout='wide')
-store = Store(os.environ.get('FITGUIDE_DB', str(Path(__file__).parent/'data'/'fitguide.db')))
 st.title('FitGuide')
 st.caption('기록에서 시작하는 나의 변화')
+store = select_store(os.environ.get('FITGUIDE_DB', str(Path(__file__).parent/'data'/'fitguide.db')))
 labels = ['홈', '내 목표', '운동 기록', '기록 내역', '분석']
 tabs = st.tabs(labels, key='page', on_change='rerun')
 page = st.session_state['page']
