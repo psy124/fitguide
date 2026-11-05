@@ -17,6 +17,13 @@ GitHub 접근 권한 확인 완료. 기능별 이슈 #1~#10을 등록했습니�
 - Python 규칙·점수 기반 추천: 근거를 설명하고 재현 가능한 추천
 - pytest: 계산과 추천 제약 검증
 
+## 데스크톱 앱 실행
+
+`dist/FitGuide/FitGuide.exe`를 더블클릭하면 전용 창으로 실행됩니다.
+배포할 때는 **FitGuide 폴더 전체**를 전달하세요. Python 설치는 필요 없으며 Windows x64와 WebView2 Runtime이 필요합니다.
+기록은 `%LOCALAPPDATA%/FitGuide`에 보관하며 기존 웹 버전과 자동 동기화하지 않습니다.
+상세 실행·빌드·백업 안내는 [데스크톱 사용법](docs/DESKTOP.md)을 참고하세요.
+
 ## 실행 (Windows PowerShell / Python 3.13)
 
 저장소 폴더에서 아래 명령을 실행하세요.

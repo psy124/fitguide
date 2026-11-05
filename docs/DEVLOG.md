@@ -161,3 +161,12 @@
 - 열량·영양소·목표별 처방은 미구현. 제품별 성분과 교차접촉은 판별하지 않으며 제품 표시 확인 안내. 참고: https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/food-allergies
 - 검증: pytest 39 passed (6.59초), 기존 Streamlit/pandas 경고 35건. 성분 필터·재료 완전성·식사 선호·시간·기구·빈 결과·검증 오류·재접속 복원·내 목표 수정 보존·데모 격리 통과.
 - AppTest로 기능 확인. 실제 브라우저 시각 검토 미실시. 다음 작업: 전체 시연 시나리오·추천 비교 평가·문서 정리.
+
+## 2026-11-05 — Windows 데스크톱 배포본
+
+- pywebview 6.2.1 / PyInstaller 6.22.3, WebView2 전용 창과 별도 Streamlit 서버 프로세스 구현.
+- 내부 서버는 127.0.0.1 임시 포트, 명시적 config 로드 및 개발 모드 해제. 시작 대기·오류 로그·종료 정리·부모 프로세스 종료 감시.
+- LOCALAPPDATA/FitGuide에 기록 보관. SQLite backup으로 기존 실제/데모 DB 최초 복사, 기존 대상 덮어쓰기 방지. 이 PC의 기록 이전 완료.
+- 빌드 spec/스크립트/의존성/사용 설명서 추가. dist/FitGuide 폴더와 ZIP 생성, 개인 DB 제외 확인. 실행 바이너리는 Git에서 제외.
+- 검증: pytest 41 passed (5.69초), 기존 차트 경고 35건. 소스/배포 EXE 서버 시작·종료 smoke test 통과. Computer Use로 실제 EXE 전용 창의 분석 그래프 표시 확인.
+- 다른 Windows PC 및 Python 없는 환경에서의 별도 검증은 미실시. WebView2 Runtime 필요. 웹/데스크톱 DB는 최초 복사 후 자동 동기화하지 않음.
