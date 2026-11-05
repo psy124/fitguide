@@ -112,6 +112,9 @@ class Store:
         return json.loads(row[0]) if row else json.loads(json.dumps(DEFAULT_PROFILE))
 
     def save_profile(self, p):
+        if "food" in p:
+            from .meals import validate_food
+            validate_food(p["food"])
         if p.get('goal') not in GOALS or p.get('level') not in LEVELS:
             raise ValueError('목표와 운동 수준을 확인하세요.')
         excluded = p.get('excluded_exercises', [])
