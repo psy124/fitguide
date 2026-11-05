@@ -14,3 +14,5 @@ venv/
 htmlcov/
 dist/
 build/
+
+desktop-build.log
