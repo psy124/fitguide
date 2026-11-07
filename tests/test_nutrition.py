@@ -35,7 +35,7 @@ def test_ai_request_and_error_redaction(monkeypatch):
     def fake(request,timeout):
         data=json.loads(request.data)
         assert 'store' not in data and data['generationConfig']['maxOutputTokens']==2048
-        assert timeout==30 and data['contents'][0]['parts'][0]['text']=='{}'
+        assert timeout==90 and data['contents'][0]['parts'][0]['text']=='{}'
         assert request.get_header('X-goog-api-key')=='test-secret'
         assert 'test-secret' not in request.full_url
         assert request.full_url.endswith('/gemini-test:generateContent')

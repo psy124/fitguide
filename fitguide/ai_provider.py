@@ -50,7 +50,7 @@ def explain(key, model, payload):
         data=json.dumps(body).encode(),
         headers={'x-goog-api-key':key.strip(),'Content-Type':'application/json'},method='POST')
     try:
-        with urllib.request.urlopen(request,timeout=30) as response:
+        with urllib.request.urlopen(request,timeout=90) as response:
             result=json.load(response)
         candidates=result.get('candidates',[])
         if result.get('promptFeedback',{}).get('blockReason') or not candidates or candidates[0].get('finishReason')!='STOP':

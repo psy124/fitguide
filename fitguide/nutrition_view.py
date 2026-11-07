@@ -89,7 +89,7 @@ def render_nutrition(store):
         consent=st.checkbox('추천에 필요한 요약 정보를 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
         if st.button('AI 설명 요청',disabled=not(code and consent)):
             try:
-                with st.spinner('AI 설명을 받고 있습니다…'):
+                with st.spinner('AI 설명을 받고 있습니다… 최대 약 90초 걸릴 수 있습니다.'):
                     response=gateway_call(url,code,payload)
                     st.session_state['coach_answer']=response['answer']
                     st.success(f"오늘 남은 요청 {response['remaining']}회")
