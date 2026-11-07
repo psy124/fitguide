@@ -18,3 +18,5 @@ build/
 desktop-build.log
 
 releases/
+
+server/private/
