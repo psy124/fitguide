@@ -9,14 +9,14 @@
 
 ## 이 PC에서 시작
 
-1. 프로젝트 폴더에서 `server/start-server.ps1`을 PowerShell로 실행합니다.
+1. 프로젝트 폴더의 `start-ai-server.cmd`를 더블클릭합니다. PowerShell 실행 정책을 바꿀 필요가 없습니다.
 2. 운영자가 사용할 Google Gemini 모델 ID와 API 키를 입력합니다. 키는 화면에 표시하지 않고 현재 프로세스 환경에만 둡니다.
 3. 이 서버 실행 창은 시연 중 열어두세요. 종료는 Ctrl+C입니다.
 4. 새 FitGuide 앱 → 식사 기록·AI → 오늘의 추천 · AI → 시연용 AI 연결에서 주소 `http://127.0.0.1:8765`를 사용합니다.
 5. `server/private/demo01-access.txt`의 시연 코드만 앱에 입력합니다. Google Gemini 키를 앱에 입력하지 않습니다.
 6. 연결·남은 횟수 확인 → 전송 내용 검토·동의 → AI 설명 요청 순으로 사용합니다.
 
-모의 서버 실행: `server/start-server.ps1 -Mock` (Google Gemini 키 불필요, 실제 AI 답변 아님).
+모의 서버 실행: `start-ai-server.cmd --mock` (Google Gemini 키 불필요, 실제 AI 답변 아님).
 API 키는 채팅·Git·배포 ZIP에 넣지 마세요. 서버의 private 폴더는 운영자 PC에만 두세요.
 
 ## 사용자 관리와 제한
