@@ -1,11 +1,10 @@
 from datetime import date
 import json
 import hashlib
-import os
 import streamlit as st
 from .nutrition import NUTRIENTS, MEALTIMES, save_food, foods, save_intake, intakes, totals, delete_intake
 from .coach import context
-from .gateway_client import gateway_call
+from .gateway_client import gateway_call, operator_connection
 from .recommendations import accept_recommendation
 
 
@@ -81,26 +80,20 @@ def render_nutrition(store):
             st.info('식사 가이드에서 식사 조건을 저장하거나 후보 조건을 확인하세요.')
         for item in payload['meals']:
             st.write('다음 식사 후보: **'+item['name']+'** · '+', '.join(item['ingredients']))
-        with st.expander('시연용 AI 연결 · 전송 내용 확인'):
-            st.caption('사용자용 API 키는 필요 없습니다. 운영자가 발급한 시연 코드로 접속합니다. 아래 요약은 시연 서버를 거쳐 Google Gemini로 전송됩니다.')
-            url=st.text_input('시연 서버 주소',value=os.environ.get('FITGUIDE_AI_SERVER','http://127.0.0.1:8765'),key='gateway_url')
-            code=st.text_input('시연 사용자 코드',type='password',key='gateway_code')
-            st.caption('코드는 세션에서만 사용하며 DB에 저장하지 않습니다. 하루 제한은 한국 시간 자정에 초기화되며 AI 서비스 실패 시도도 차감됩니다.')
-            if st.button('연결·남은 횟수 확인',disabled=not code):
-                try:
-                    quota=gateway_call(url,code)
-                    st.success(f"연결됨 · 오늘 남은 요청 {quota['remaining']}회 (사용자 한도 {quota['limit']}회)")
-                except ValueError as exc: st.error(str(exc))
-            st.json(payload)
-            consent_key=hashlib.sha256((signature+url+code).encode()).hexdigest()
-            consent=st.checkbox('위 요약을 시연 서버와 Google Gemini로 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
-            if st.button('AI 설명 요청',disabled=not(code and consent)):
-                try:
-                    with st.spinner('AI 설명을 받고 있습니다…'):
-                        response=gateway_call(url,code,payload)
-                        st.session_state['coach_answer']=response['answer']
-                        st.success(f"오늘 남은 요청 {response['remaining']}회")
-                except ValueError as exc: st.error(str(exc))
+        st.subheader('AI 맞춤 설명')
+        url,code=operator_connection()
+        if not code:
+            st.caption('AI 서비스가 아직 설정되지 않았습니다. 운영자에게 문의하세요.')
+        st.caption('오늘의 식사·영양 합계, 운동 기록 요약, 목표와 컨디션을 시연 서버를 거쳐 Google Gemini로 전송합니다. 하루 요청 제한이 적용됩니다.')
+        consent_key=hashlib.sha256((signature+url+code).encode()).hexdigest()
+        consent=st.checkbox('추천에 필요한 요약 정보를 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
+        if st.button('AI 설명 요청',disabled=not(code and consent)):
+            try:
+                with st.spinner('AI 설명을 받고 있습니다…'):
+                    response=gateway_call(url,code,payload)
+                    st.session_state['coach_answer']=response['answer']
+                    st.success(f"오늘 남은 요청 {response['remaining']}회")
+            except ValueError as exc: st.error(str(exc))
         if 'coach_answer' in st.session_state:
             st.subheader('AI 설명 · 검토용')
             st.write(st.session_state['coach_answer'])

@@ -74,3 +74,27 @@ def test_gemini_blocked_incomplete_empty(monkeypatch,result):
 def test_gemini_model_validation():
     for model in ['gpt-test','gemini-test?key=secret','gemini-test/elsewhere']:
         with pytest.raises(ValueError):explain('test-secret',model,{})
+
+
+def test_operator_connection_ui(tmp_path,monkeypatch):
+    monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'ui.db'))
+    monkeypatch.setenv('FITGUIDE_AI_CONFIG',str(tmp_path/'missing.json'))
+    monkeypatch.setenv('FITGUIDE_AI_CODE','operator-test-code')
+    monkeypatch.setenv('FITGUIDE_AI_SERVER','http://127.0.0.1:8765')
+    calls=[]
+    def fake_gateway(url,code,payload):
+        calls.append((url,code,payload))
+        return {'answer':'테스트 설명','remaining':9}
+    monkeypatch.setattr('fitguide.nutrition_view.gateway_call',fake_gateway)
+    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록·AI')
+    at.session_state['gateway_url']='https://untrusted.example'
+    at.session_state['gateway_code']='user-modified'
+    at.run()
+    assert not any(w.label in ('시연 서버 주소','시연 사용자 코드') for w in at.text_input)
+    assert not at.get('json')
+    assert next(b for b in at.button if b.label=='AI 설명 요청').disabled
+    next(c for c in at.checkbox if c.key and c.key.startswith('coach_consent_')).check().run()
+    next(b for b in at.button if b.label=='AI 설명 요청').click().run()
+    assert not at.exception
+    assert calls[0][:2]==('http://127.0.0.1:8765','operator-test-code')
+
