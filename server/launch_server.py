@@ -17,6 +17,7 @@ def launch(config_path, mock=False, port=8765):
             model=input('Gemini 모델 ID (gemini-로 시작): ').strip().removeprefix('models/')
         config['model']=model
         config_path.write_text(json.dumps(config,ensure_ascii=False,indent=2),encoding='utf-8')
+        print('사용 모델: '+model,flush=True)
         key=getpass.getpass('Gemini API 키 (입력 내용은 표시되지 않음): ').strip()
         if not key:
             raise ValueError('API 키가 비어 있습니다. 다시 실행하세요.')
