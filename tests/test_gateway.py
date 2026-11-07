@@ -65,3 +65,19 @@ def test_reject_unsafe_remote_url():
     for url in ['http://192.168.0.5:8765','https://user:secret@example.com','https://example.com/path','file:///x']:
         with pytest.raises(ValueError):server_url(url)
     assert server_url('https://example.com/')=='https://example.com'
+
+
+def test_diagnostic_compares_real_transport(monkeypatch,capsys):
+    from server import diagnose_gemini as diagnostic
+    calls=[]
+    monkeypatch.setattr(diagnostic,'probe',lambda key,model:True)
+    monkeypatch.setattr(diagnostic,'explain',lambda key,model,payload:calls.append((key,model,payload)))
+    diagnostic.compare_requests('private-key','gemini-test')
+    assert calls[0][0:2]==('private-key','gemini-test')
+    assert calls[0][2]['meal_names']==['가상 식사']
+    output=capsys.readouterr().out
+    assert 'FITGUIDE_GENERATION: OK' in output and 'private-key' not in output
+    calls.clear()
+    monkeypatch.setattr(diagnostic,'probe',lambda key,model:False)
+    diagnostic.compare_requests('private-key','gemini-test')
+    assert not calls
