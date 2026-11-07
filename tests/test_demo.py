@@ -58,3 +58,38 @@ def test_demo_ui_switch_and_reset_preserves_real(tmp_path,monkeypatch):
     assert len(real.records())==1
     at.toggle(key='demo_mode').set_value(True).run()
     assert len(Store(demo_path(path)).records())==378
+
+def test_demo_meals_additive_and_idempotent(tmp_path):
+    from fitguide.nutrition import intakes, totals
+    from datetime import timedelta
+    path=tmp_path/'real.db'
+    real=Store(path)
+    original=path.read_bytes()
+    demo=seed_demo(path)
+    today=date.today()
+    assert len(intakes(demo,today))==4
+    assert {r['mealtime'] for r in intakes(demo,today)}=={'아침','점심','저녁','간식'}
+    assert totals(intakes(demo,today))['kcal']>0
+    with demo.connection() as db:
+        assert db.execute('SELECT COUNT(*) FROM food_intake').fetchone()[0]==28
+        db.execute('DELETE FROM food_intake WHERE id=(SELECT MIN(id) FROM food_intake)')
+    seed_demo(path)
+    with demo.connection() as db:
+        assert db.execute('SELECT COUNT(*) FROM food_intake').fetchone()[0]==27
+    assert len(intakes(demo,today-timedelta(days=6)))==4
+    assert path.read_bytes()==original
+
+
+def test_demo_meals_upgrades_existing_without_reset(tmp_path):
+    path=tmp_path/'real.db';demo=seed_demo(path)
+    with demo.connection() as db:
+        db.execute('DELETE FROM food_intake')
+        db.execute('DELETE FROM demo_info WHERE id=2')
+        db.execute("INSERT INTO food_intake(day,mealtime,name,grams,payload,source) VALUES('2026-01-01','점심','내 기록',100,'{}','사용자')")
+    draft=__import__('fitguide.workout_view',fromlist=['make_workout']).make_workout()
+    demo.save_draft(draft)
+    seed_demo(path)
+    assert demo.draft()==draft
+    with demo.connection() as db:
+        assert db.execute('SELECT COUNT(*) FROM food_intake').fetchone()[0]==29
+        assert db.execute("SELECT COUNT(*) FROM food_intake WHERE name='내 기록'").fetchone()[0]==1

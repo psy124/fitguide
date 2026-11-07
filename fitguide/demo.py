@@ -11,6 +11,31 @@ def demo_path(real_path):
     return path.with_name(path.name + '.demo.sqlite3')
 
 
+def add_demo_meals(db, today):
+    """One-time additive migration, using the demo-only metadata table."""
+    if db.execute('SELECT 1 FROM demo_info WHERE id=2').fetchone():
+        return
+    source='시연용 합성 영양 수치 / 100g — 실제 식품 영양정보 아님'
+    samples=[
+        ('가상 · 요거트 과일 볼',dict(kcal=120.,protein=6.,carbs=18.,fat=3.),'아침',200.),
+        ('가상 · 닭고기 밥 도시락',dict(kcal=160.,protein=12.,carbs=20.,fat=4.),'점심',350.),
+        ('가상 · 두부 채소 덮밥',dict(kcal=140.,protein=8.,carbs=21.,fat=3.),'저녁',300.),
+        ('가상 · 견과류 간식',dict(kcal=580.,protein=18.,carbs=20.,fat=48.),'간식',25.),
+        ('가상 · 달걀 샌드위치',dict(kcal=220.,protein=10.,carbs=26.,fat=8.),'아침',180.),
+        ('가상 · 생선 밥 접시',dict(kcal=170.,protein=13.,carbs=19.,fat=5.),'점심',330.),
+    ]
+    for name,values,_,_ in samples:
+        db.execute('INSERT OR IGNORE INTO food_catalog VALUES(?,?,?)',(name,json.dumps(values),source))
+    for offset in range(7):
+        day=(today-timedelta(days=offset)).isoformat()
+        chosen=[samples[4 if offset%2 else 0],samples[5 if offset%2 else 1],samples[2],samples[3]]
+        for name,values,meal,grams in chosen:
+            amount=grams+(10. if offset%3==1 and meal!='간식' else 0.)
+            db.execute('INSERT INTO food_intake(day,mealtime,name,grams,payload,source) VALUES(?,?,?,?,?,?)',
+                       (day,meal,name,amount,json.dumps(values),source))
+    db.execute('INSERT INTO demo_info VALUES(2,?)',(today.isoformat(),))
+
+
 def seed_demo(real_path, *, reset=False, today=None):
     """Only the derived demo database is writable; seed atomically and only once."""
     today = today or date.today()
@@ -37,16 +62,14 @@ def seed_demo(real_path, *, reset=False, today=None):
         db.execute('BEGIN IMMEDIATE')
         db.execute('CREATE TABLE IF NOT EXISTS demo_info (id INTEGER PRIMARY KEY, generated_on TEXT NOT NULL)')
         if db.execute('SELECT 1 FROM demo_info WHERE id=1').fetchone() and not reset:
+            add_demo_meals(db,today)
             return store
         for table in ('profile', 'workout_sets', 'body_weights', 'workout_draft', 'routines', 'food_catalog', 'food_intake', 'demo_info'):
             db.execute(f'DELETE FROM {table}')
         db.execute('INSERT INTO profile VALUES(1,?)', (json.dumps(profile, ensure_ascii=False),))
         db.executemany('INSERT INTO workout_sets(day,exercise,weight,reps) VALUES(?,?,?,?)', rows)
         db.executemany('INSERT INTO body_weights VALUES(?,?)', weights)
-        sample = json.dumps(dict(kcal=200., protein=10., carbs=25., fat=6.))
-        db.execute('INSERT INTO food_catalog VALUES(?,?,?)', ('가상 식사 샘플',sample,'시연용 합성 수치 — 실제 식품 아님'))
-        db.execute('INSERT INTO food_intake(day,mealtime,name,grams,payload,source) VALUES(?,?,?,?,?,?)',
-                   (today.isoformat(),'점심','가상 식사 샘플',150.,sample,'시연용 합성 수치 — 실제 식품 아님'))
+        add_demo_meals(db,today)
         routine = [dict(name=name, sets=[dict(weight=float(base), reps=10) for _ in range(3)])
                    for name, base in exercises[:3]]
         db.execute('INSERT INTO routines VALUES(?,?)', ('가상 상체 루틴', json.dumps(routine, ensure_ascii=False)))
@@ -70,7 +93,7 @@ def select_store(real_path):
     store = seed_demo(real_path)
     st.warning('데모 모드 · 모든 수치는 가상 데이터입니다. 입력·수정·삭제는 데모에만 적용되며 내 기록과 분리됩니다.')
     with st.expander('가상 데이터 안내 · 초기화'):
-        st.write('최근 8주 범위의 운동 21일·378세트·6종목, 체중 16회, 키·목표 체중과 예시 루틴을 제공합니다.')
+        st.write('최근 8주 범위의 운동 21일·378세트·6종목, 체중 16회, 키·목표 체중과 예시 루틴을 제공합니다. 식사 예시는 생성일 기준 7일·28건·6종입니다.')
         st.caption('중량 증가, 체중의 작은 등락, 운동을 쉬는 구간을 확인하는 시연용 데이터입니다. 실제 사용자 결과나 운동 효과의 근거가 아닙니다.')
         st.caption('분석 기간을 전체 또는 최근 12주로 바꾸면 생성된 전체 기록을 볼 수 있습니다. 오래된 데모는 초기화하면 오늘 기준으로 다시 생성됩니다.')
         confirm = st.checkbox('데모에서 변경한 내용과 진행 중 운동을 지우고 다시 생성합니다.', key='confirm_demo_reset')
