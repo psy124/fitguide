@@ -124,7 +124,9 @@ python -m venv .venv
 
 **식사 기록·AI** 탭에서 식품의 100g당 영양 표시를 등록하고 섭취량을 기록합니다.
 오늘 식사 합계와 운동 목표·컨디션·기존 추천 후보를 모아 선택적으로 AI 설명을 요청할 수 있습니다.
-API 키가 없어도 식사 기록·합계·기본 추천을 사용합니다.
+사용자는 API 키 대신 운영자가 발급한 시연 코드를 사용합니다. 서버 연결 없이도 식사 기록·합계·기본 추천을 사용합니다.
+운영자는 [시연 서버 안내](docs/DEMO_SERVER.md)에 따라 PC에서 서버를 실행합니다.
+최신 데스크톱 배포본: `releases/demo-server/FitGuide/FitGuide.exe`.
 설정과 제한은 [식사 기록 및 AI 사용법](docs/NUTRITION_AI.md)을 참고하세요.
 2026-11-07 데스크톱 갱신본은 `releases/2026-11-07/FitGuide/FitGuide.exe`입니다.
 
