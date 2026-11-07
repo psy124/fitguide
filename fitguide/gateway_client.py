@@ -1,4 +1,6 @@
 """Desktop client for the operator's authenticated AI gateway."""
+import os
+from pathlib import Path
 import json
 import urllib.error
 import urllib.parse
@@ -36,3 +38,18 @@ def gateway_call(url,code,payload=None):
         raise ValueError(messages.get(e.code,'서버 요청에 실패했습니다. 서버 주소·설정을 확인하세요.')) from None
     except Exception:
         raise ValueError('시연 서버에 연결할 수 없습니다. 서버 실행 여부와 주소를 확인하세요. 기본 추천은 계속 사용할 수 있습니다.') from None
+
+
+def operator_connection():
+    """Read operator provisioning, never user-editable Streamlit widget state."""
+    path=os.environ.get('FITGUIDE_AI_CONFIG')
+    if not path:
+        path=str(Path(os.environ.get('LOCALAPPDATA',str(Path.home()))) / 'FitGuide' / 'ai-client.json')
+    try:
+        config=json.loads(Path(path).read_text(encoding='utf-8-sig'))
+        if not isinstance(config,dict): config={}
+    except (OSError,ValueError):
+        config={}
+    url=os.environ.get('FITGUIDE_AI_SERVER',config.get('server_url','http://127.0.0.1:8765'))
+    code=os.environ.get('FITGUIDE_AI_CODE',config.get('access_code',''))
+    return (url if isinstance(url,str) else '',code if isinstance(code,str) else '')

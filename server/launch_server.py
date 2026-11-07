@@ -25,7 +25,7 @@ def launch(config_path, mock=False, port=8765):
                     config['users'],provider,config.get('user_daily_limit',10),config.get('total_daily_limit',100))
     with Server(('127.0.0.1',port),gateway) as server:
         print(f'시연 서버 준비 완료: http://127.0.0.1:{server.server_address[1]}',flush=True)
-        print('앱에서 연결 확인을 누르세요. 이 창을 열어두세요. 종료: Ctrl+C',flush=True)
+        print('앱에서 AI 설명 요청을 누르세요. 이 창을 열어두세요. 종료: Ctrl+C',flush=True)
         print('실제 Gemini 응답은 첫 AI 설명 요청에서 확인됩니다.',flush=True)
         server.serve_forever()
 

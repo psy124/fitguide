@@ -57,3 +57,12 @@ API 키는 채팅·Git·배포 ZIP에 넣지 마세요. 서버의 private 폴더
 - 인증은 x-goog-api-key 헤더, generateContent REST 형식, 답변 후보 1개·최대 출력 2048토큰·30초 타임아웃입니다.
 - Google 서비스의 데이터 처리와 요금은 계정 및 이용 조건에 따릅니다. 앱은 보관 여부를 임의로 보장하지 않습니다.
 - 공식 문서: https://ai.google.dev/api/generate-content / https://ai.google.dev/gemini-api/docs/api-key
+
+
+### 운영자 전용 클라이언트 설정 (2026-11-07)
+추천 화면의 서버 주소, 코드 입력, JSON 미리보기와 연결 설정 버튼을 제거했습니다.
+운영자는 `%LOCALAPPDATA%/FitGuide/ai-client.json`에 `server_url`, `access_code`를 설정합니다.
+또는 `FITGUIDE_AI_CONFIG`로 설정 경로를 지정하거나 `FITGUIDE_AI_SERVER`, `FITGUIDE_AI_CODE` 환경 변수로 설정합니다.
+사용자별 발급 코드를 사용하고 설정 파일은 GitHub와 배포 ZIP에 포함하지 않습니다. Gemini API 키는 서버에만 둡니다.
+설정 파일은 로컬 PC 소유자의 수정까지 방지하지 않습니다. 인증, 사용자별 한도와 전체 한도는 서버가 검증합니다.
+설정이 없으면 기본 추천은 이용할 수 있지만 AI 요청은 비활성화됩니다. 전송 동의는 요청 화면에 유지합니다.
