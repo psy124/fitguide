@@ -157,8 +157,8 @@ def main():
         if args.host not in ('127.0.0.1','localhost'): raise ValueError('모의 서버는 로컬에서만 실행하세요.')
         provider=lambda payload:'[모의 응답 — 실제 AI 아님] 서버 인증과 일일 요청 제한 연결을 확인했습니다.'
     else:
-        key=os.environ.get('OPENAI_API_KEY','');model=config.get('model','')
-        if not key or not model: raise ValueError('서버에 OPENAI_API_KEY와 model을 설정하세요.')
+        key=os.environ.get('GEMINI_API_KEY','');model=config.get('model','')
+        if not key or not model: raise ValueError('서버에 GEMINI_API_KEY와 model을 설정하세요.')
         provider=lambda payload:explain(key,model,payload)
     gateway=Gateway(Path(args.config).resolve().parent/('usage-mock.sqlite3' if args.mock else 'usage.sqlite3'),config['users'],provider,
                     config.get('user_daily_limit',10),config.get('total_daily_limit',100))

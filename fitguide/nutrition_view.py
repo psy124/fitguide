@@ -82,7 +82,7 @@ def render_nutrition(store):
         for item in payload['meals']:
             st.write('다음 식사 후보: **'+item['name']+'** · '+', '.join(item['ingredients']))
         with st.expander('시연용 AI 연결 · 전송 내용 확인'):
-            st.caption('사용자용 API 키는 필요 없습니다. 운영자가 발급한 시연 코드로 접속합니다. 아래 요약은 시연 서버를 거쳐 OpenAI로 전송됩니다.')
+            st.caption('사용자용 API 키는 필요 없습니다. 운영자가 발급한 시연 코드로 접속합니다. 아래 요약은 시연 서버를 거쳐 Google Gemini로 전송됩니다.')
             url=st.text_input('시연 서버 주소',value=os.environ.get('FITGUIDE_AI_SERVER','http://127.0.0.1:8765'),key='gateway_url')
             code=st.text_input('시연 사용자 코드',type='password',key='gateway_code')
             st.caption('코드는 세션에서만 사용하며 DB에 저장하지 않습니다. 하루 제한은 한국 시간 자정에 초기화되며 AI 서비스 실패 시도도 차감됩니다.')
@@ -93,7 +93,7 @@ def render_nutrition(store):
                 except ValueError as exc: st.error(str(exc))
             st.json(payload)
             consent_key=hashlib.sha256((signature+url+code).encode()).hexdigest()
-            consent=st.checkbox('위 요약을 시연 서버와 OpenAI로 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
+            consent=st.checkbox('위 요약을 시연 서버와 Google Gemini로 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
             if st.button('AI 설명 요청',disabled=not(code and consent)):
                 try:
                     with st.spinner('AI 설명을 받고 있습니다…'):

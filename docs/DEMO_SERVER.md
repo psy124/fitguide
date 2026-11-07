@@ -10,13 +10,13 @@
 ## 이 PC에서 시작
 
 1. 프로젝트 폴더에서 `server/start-server.ps1`을 PowerShell로 실행합니다.
-2. 운영자가 사용할 OpenAI 모델 ID와 API 키를 입력합니다. 키는 화면에 표시하지 않고 현재 프로세스 환경에만 둡니다.
+2. 운영자가 사용할 Google Gemini 모델 ID와 API 키를 입력합니다. 키는 화면에 표시하지 않고 현재 프로세스 환경에만 둡니다.
 3. 이 서버 실행 창은 시연 중 열어두세요. 종료는 Ctrl+C입니다.
 4. 새 FitGuide 앱 → 식사 기록·AI → 오늘의 추천 · AI → 시연용 AI 연결에서 주소 `http://127.0.0.1:8765`를 사용합니다.
-5. `server/private/demo01-access.txt`의 시연 코드만 앱에 입력합니다. OpenAI 키를 앱에 입력하지 않습니다.
+5. `server/private/demo01-access.txt`의 시연 코드만 앱에 입력합니다. Google Gemini 키를 앱에 입력하지 않습니다.
 6. 연결·남은 횟수 확인 → 전송 내용 검토·동의 → AI 설명 요청 순으로 사용합니다.
 
-모의 서버 실행: `server/start-server.ps1 -Mock` (OpenAI 키 불필요, 실제 AI 답변 아님).
+모의 서버 실행: `server/start-server.ps1 -Mock` (Google Gemini 키 불필요, 실제 AI 답변 아님).
 API 키는 채팅·Git·배포 ZIP에 넣지 마세요. 서버의 private 폴더는 운영자 PC에만 두세요.
 
 ## 사용자 관리와 제한
@@ -44,3 +44,16 @@ API 키는 채팅·Git·배포 ZIP에 넣지 마세요. 서버의 private 폴더
 `python -m pytest tests/test_gateway.py -q`: 인증, 자정 초기화, 재시작 유지, 전역 제한,
 동시 요청, 오류 시 차감, 실제 로컬 HTTP 요청, 외부 HTTP 차단을 확인합니다.
 서버는 Python 표준 라이브러리를 사용하며 별도 웹 프레임워크 설치가 필요 없습니다.
+
+## Gemini 설정
+
+- API 키 발급/확인: https://aistudio.google.com/apikey
+- 서버 환경 변수는 GEMINI_API_KEY입니다. 키는 서버 실행 시 입력하고 파일에 저장하지 않습니다.
+- 모델은 Google AI Studio 계정에서 사용할 수 있는 gemini-로 시작하는 ID를 입력합니다.
+- 이전 OpenAI 모델이 저장되어 있으면 실행 스크립트가 Gemini 모델을 다시 묻습니다.
+- 운영자 설정을 변경한 뒤 기존 서버를 Ctrl+C로 종료하고 다시 실행하세요.
+- 앱에서 전송 동의 대상은 Google Gemini로 표시됩니다. 최신 앱: releases/gemini-server/FitGuide/FitGuide.exe.
+- 연결·남은 횟수 확인은 시연 서버 인증만 검증합니다. 실제 Gemini 호출 성공 여부는 AI 설명 요청에서 확인됩니다.
+- 인증은 x-goog-api-key 헤더, generateContent REST 형식, 답변 후보 1개·최대 출력 2048토큰·30초 타임아웃입니다.
+- Google 서비스의 데이터 처리와 요금은 계정 및 이용 조건에 따릅니다. 앱은 보관 여부를 임의로 보장하지 않습니다.
+- 공식 문서: https://ai.google.dev/api/generate-content / https://ai.google.dev/gemini-api/docs/api-key
