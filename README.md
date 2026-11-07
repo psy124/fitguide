@@ -126,7 +126,7 @@ python -m venv .venv
 오늘 식사 합계와 운동 목표·컨디션·기존 추천 후보를 모아 선택적으로 AI 설명을 요청할 수 있습니다.
 사용자는 API 키 대신 운영자가 발급한 시연 코드를 사용합니다. 서버 연결 없이도 식사 기록·합계·기본 추천을 사용합니다.
 AI 제공자는 Google Gemini입니다. 운영자는 [시연 서버 안내](docs/DEMO_SERVER.md)에 따라 PC에서 서버를 실행합니다.
-최신 데스크톱 배포본: `releases/gemini-server/FitGuide/FitGuide.exe`.
+최신 데스크톱 배포본: `releases/meal-demo/FitGuide/FitGuide.exe`.
 설정과 제한은 [식사 기록 및 AI 사용법](docs/NUTRITION_AI.md)을 참고하세요.
 2026-11-07 데스크톱 갱신본은 `releases/2026-11-07/FitGuide/FitGuide.exe`입니다.
 
@@ -148,3 +148,5 @@ AI 제공자는 Google Gemini입니다. 운영자는 [시연 서버 안내](docs
 목표 변경에 따른 추천 차이, 기구 제약 준수, 집계 정확성, 추천 적용 후 저장 여부를 검증합니다.
 추천 결과는 기록 기반 제안이며 신체 변화나 의료적 효과를 입증하는 결과로 표현하지 않습니다.
 
+
+데모 식사 기록: 생성일 기준 최근 7일·28건·6종. 모든 영양 수치는 합성 테스트 데이터이며 실제 식품 정보나 권장 식단이 아닙니다.
