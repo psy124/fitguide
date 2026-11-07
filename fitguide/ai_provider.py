@@ -2,6 +2,15 @@
 import json
 import re
 import urllib.request
+import urllib.error
+import socket
+
+class ProviderError(ValueError):
+    """Only fixed diagnostic codes; never retain provider bodies or secrets."""
+    def __init__(self, code):
+        self.code=code
+        super().__init__('AI 응답 실패 ['+code+']')
+
 
 def explain(key, model, payload):
     model=model.strip().removeprefix('models/')
@@ -27,12 +36,21 @@ def explain(key, model, payload):
             result=json.load(response)
         candidates=result.get('candidates',[])
         if result.get('promptFeedback',{}).get('blockReason') or not candidates or candidates[0].get('finishReason')!='STOP':
-            raise ValueError('완료된 답변이 없거나 안전 필터에 의해 차단되었습니다.')
+            raise ProviderError('OUTPUT_LIMIT' if candidates and candidates[0].get('finishReason')=='MAX_TOKENS' else 'BLOCKED_OR_INCOMPLETE')
         output='\n'.join(part['text'] for part in candidates[0].get('content',{}).get('parts',[])
                          if isinstance(part.get('text'),str) and not part.get('thought',False))
         if not output.strip():
-            raise ValueError('응답 텍스트가 없습니다.')
+            raise ProviderError('EMPTY_RESPONSE')
         return output
+    except ProviderError:
+        raise
+    except urllib.error.HTTPError as exc:
+        code={400:'BAD_REQUEST',401:'AUTHENTICATION',403:'PERMISSION',404:'MODEL_NOT_FOUND',429:'PROVIDER_QUOTA',500:'PROVIDER_INTERNAL',503:'PROVIDER_UNAVAILABLE'}.get(exc.code,'HTTP_ERROR')
+        raise ProviderError(code) from None
+    except (TimeoutError,socket.timeout):
+        raise ProviderError('TIMEOUT') from None
+    except urllib.error.URLError:
+        raise ProviderError('NETWORK') from None
     except Exception:
         # Never display an HTTP body, credential, or provider error containing request data.
         raise ValueError('AI 응답을 받지 못했습니다. 키·모델·연결·사용 한도를 확인하세요. 아래 기본 추천은 계속 사용할 수 있습니다.') from None

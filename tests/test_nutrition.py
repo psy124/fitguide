@@ -98,3 +98,16 @@ def test_operator_connection_ui(tmp_path,monkeypatch):
     assert not at.exception
     assert calls[0][:2]==('http://127.0.0.1:8765','operator-test-code')
 
+
+
+@pytest.mark.parametrize('status,code',[(400,'BAD_REQUEST'),(403,'PERMISSION'),(404,'MODEL_NOT_FOUND'),(429,'PROVIDER_QUOTA')])
+def test_provider_diagnostics_redact(monkeypatch,status,code):
+    import urllib.error
+    from fitguide.ai_provider import ProviderError
+    def fail(*args,**kwargs):
+        raise urllib.error.HTTPError('https://example.com',status,'secret-body',{},io.BytesIO(b'private-data'))
+    monkeypatch.setattr('urllib.request.urlopen',fail)
+    with pytest.raises(ProviderError) as error:
+        explain('secret-key','gemini-test',{})
+    assert error.value.code==code
+    assert 'secret' not in str(error.value) and 'private' not in str(error.value)
