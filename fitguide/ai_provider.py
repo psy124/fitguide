@@ -12,6 +12,24 @@ class ProviderError(ValueError):
         super().__init__('AI 응답 실패 ['+code+']')
 
 
+def http_diagnostic(exc):
+    fallback={400:'BAD_REQUEST',401:'AUTHENTICATION',403:'PERMISSION',404:'MODEL_NOT_FOUND',429:'PROVIDER_QUOTA',500:'PROVIDER_INTERNAL',503:'PROVIDER_UNAVAILABLE'}.get(exc.code,'HTTP_ERROR')
+    allowed={'API_KEY_INVALID','API_KEY_EXPIRED','API_KEY_SERVICE_BLOCKED','API_KEY_HTTP_REFERRER_BLOCKED','API_KEY_IP_ADDRESS_BLOCKED','SERVICE_DISABLED','BILLING_DISABLED','CONSUMER_INVALID'}
+    try:
+        error=json.loads(exc.read(16384)).get('error',{})
+        for detail in error.get('details',[]):
+            reason=detail.get('reason')
+            if isinstance(reason,str) and reason in allowed:
+                return reason
+        if error.get('status')=='FAILED_PRECONDITION':
+            return 'FAILED_PRECONDITION'
+        if error.get('status')=='INVALID_ARGUMENT':
+            return 'INVALID_ARGUMENT'
+    except (ValueError,TypeError,AttributeError,OSError):
+        pass
+    return fallback
+
+
 def explain(key, model, payload):
     model=model.strip().removeprefix('models/')
     if not key.strip() or not re.fullmatch(r'gemini-[A-Za-z0-9._-]{1,100}',model):
@@ -45,8 +63,7 @@ def explain(key, model, payload):
     except ProviderError:
         raise
     except urllib.error.HTTPError as exc:
-        code={400:'BAD_REQUEST',401:'AUTHENTICATION',403:'PERMISSION',404:'MODEL_NOT_FOUND',429:'PROVIDER_QUOTA',500:'PROVIDER_INTERNAL',503:'PROVIDER_UNAVAILABLE'}.get(exc.code,'HTTP_ERROR')
-        raise ProviderError(code) from None
+        raise ProviderError(http_diagnostic(exc)) from None
     except (TimeoutError,socket.timeout):
         raise ProviderError('TIMEOUT') from None
     except urllib.error.URLError:

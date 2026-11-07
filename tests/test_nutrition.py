@@ -111,3 +111,17 @@ def test_provider_diagnostics_redact(monkeypatch,status,code):
         explain('secret-key','gemini-test',{})
     assert error.value.code==code
     assert 'secret' not in str(error.value) and 'private' not in str(error.value)
+
+
+@pytest.mark.parametrize('error,expected',[
+    ({'details':[{'reason':'API_KEY_INVALID','metadata':{'secret':'hidden'}}]},'API_KEY_INVALID'),
+    ({'status':'FAILED_PRECONDITION','message':'secret'},'FAILED_PRECONDITION'),
+    ({'status':'INVALID_ARGUMENT','message':'secret'},'INVALID_ARGUMENT'),
+    ({'details':[{'reason':'private-secret'}]},'BAD_REQUEST'),
+    ({'details':None},'BAD_REQUEST'),
+])
+def test_safe_http_reason(error,expected):
+    import urllib.error
+    from fitguide.ai_provider import http_diagnostic
+    exc=urllib.error.HTTPError('https://example.com',400,'secret',{},io.BytesIO(json.dumps({'error':error}).encode()))
+    assert http_diagnostic(exc)==expected
