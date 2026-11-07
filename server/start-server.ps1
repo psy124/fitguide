@@ -1,4 +1,4 @@
-param([switch]$Mock)
+﻿param([switch]$Mock)
 $ErrorActionPreference='Stop'
 Set-Location $PSScriptRoot
 $configPath=Join-Path $PSScriptRoot 'private\config.json'
@@ -8,17 +8,17 @@ if ($Mock) {
     & $python gateway.py --config $configPath --mock
 } else {
     $config=Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
-    if (-not $config.model) {
-        $config.model=Read-Host '계정에서 사용 가능한 OpenAI 모델 ID'
+    if (-not $config.model -or $config.model -notmatch '^(models/)?gemini-') {
+        $config.model=Read-Host 'Google AI Studio에서 사용할 Gemini 모델 ID (gemini-로 시작)'
         $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding utf8
     }
-    $secret=Read-Host '운영자 OpenAI API 키 (화면에 표시되지 않음)' -AsSecureString
+    $secret=Read-Host '운영자 Gemini API 키 (화면에 표시되지 않음)' -AsSecureString
     $pointer=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret)
     try {
-        $env:OPENAI_API_KEY=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+        $env:GEMINI_API_KEY=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
         & $python gateway.py --config $configPath
     } finally {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
-        Remove-Item Env:\OPENAI_API_KEY -ErrorAction SilentlyContinue
+        Remove-Item Env:\GEMINI_API_KEY -ErrorAction SilentlyContinue
     }
 }

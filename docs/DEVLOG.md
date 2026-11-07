@@ -191,3 +191,11 @@
 - pytest 50 passed (6.49초), 기존 차트 경고 35건. 인증/재시작/자정/동시성/전역 한도/모의 HTTP 왕복 테스트 통과.
 - private 설정·코드·사용량은 Git/배포본 제외. pytest 수집을 tests로 제한해 배포본 내부 패키지와 경로 충돌 방지.
 - 새 데스크톱 배포본 releases/demo-server/FitGuide 서버 시작·종료 검사 통과. 사용자 ZIP에서 DB·시연 코드·운영자 설정 제외 확인. 실서버 키 입력은 운영자용 start-server.ps1에서 수행해야 함.
+
+## 2026-11-07 — Gemini API로 전환
+
+- 사용자 요청으로 서버 제공자를 Google Gemini generateContent로 교체. GEMINI_API_KEY 환경 변수 및 x-goog-api-key 헤더 사용, 키를 URL에 넣지 않음.
+- 모델 ID 정규식 검증, systemInstruction 및 제한된 출력 설정, STOP 완료 응답의 텍스트만 처리. thought 부분·안전 차단·미완성/빈 답변은 표시하지 않음.
+- 앱 전송 동의 안내와 운영자 실행 스크립트·문서를 Google Gemini로 갱신. 기존 시연 코드와 한도/사용량 유지.
+- pytest 55 passed (6.71초), 기존 차트 경고 35건. 정상 응답·헤더·추론 제외·안전 차단·미완성·빈 응답·잘못된 모델·비밀 오류 제거 검증.
+- 실제 키가 제공되지 않아 실서비스 호출은 아직 미검증. Google AI Studio에서 사용 가능한 모델과 키를 운영자 서버 실행 시 입력해야 함.

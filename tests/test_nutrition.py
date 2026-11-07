@@ -33,14 +33,18 @@ def test_context_gates_and_no_nutrition_invention(tmp_path):
 
 def test_ai_request_and_error_redaction(monkeypatch):
     def fake(request,timeout):
-        data=json.loads(request.data);assert data['store'] is False
-        assert timeout==30 and data['input']=='{}'
-        return io.BytesIO(json.dumps({'status':'completed','output':[{'type':'message','content':[{'type':'output_text','text':'검토용 설명'}]}]}).encode())
+        data=json.loads(request.data)
+        assert 'store' not in data and data['generationConfig']['maxOutputTokens']==2048
+        assert timeout==30 and data['contents'][0]['parts'][0]['text']=='{}'
+        assert request.get_header('X-goog-api-key')=='test-secret'
+        assert 'test-secret' not in request.full_url
+        assert request.full_url.endswith('/gemini-test:generateContent')
+        return io.BytesIO(json.dumps({'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'숨길 추론','thought':True},{'text':'검토용 설명'}]}}]}).encode())
     monkeypatch.setattr('urllib.request.urlopen',fake)
-    assert explain('test-secret','test-model',{})=='검토용 설명'
+    assert explain('test-secret','gemini-test',{})=='검토용 설명'
     def failed(*args,**kwargs): raise RuntimeError('test-secret')
     monkeypatch.setattr('urllib.request.urlopen',failed)
-    with pytest.raises(ValueError,match='AI 응답') as e: explain('test-secret','test-model',{})
+    with pytest.raises(ValueError,match='AI 응답') as e: explain('test-secret','gemini-test',{})
     assert 'test-secret' not in str(e.value)
 
 
@@ -55,3 +59,18 @@ def test_intake_ui(tmp_path,monkeypatch):
     next(c for c in at.checkbox if c.label=='현재 통증 또는 운동하기 불편한 증상이 있음').check().run()
     assert not any(b.key and b.key.startswith('coach_add_') for b in at.button)
     assert not at.exception
+
+@pytest.mark.parametrize('result',[
+    {'promptFeedback':{'blockReason':'SAFETY'}},
+    {'candidates':[]},
+    {'candidates':[{'finishReason':'MAX_TOKENS','content':{'parts':[{'text':'미완성'}]}}]},
+    {'candidates':[{'finishReason':'STOP','content':{'parts':[]}}]},
+])
+def test_gemini_blocked_incomplete_empty(monkeypatch,result):
+    monkeypatch.setattr('urllib.request.urlopen',lambda *a,**k:io.BytesIO(json.dumps(result).encode()))
+    with pytest.raises(ValueError,match='AI 응답'):explain('test-secret','gemini-test',{})
+
+
+def test_gemini_model_validation():
+    for model in ['gpt-test','gemini-test?key=secret','gemini-test/elsewhere']:
+        with pytest.raises(ValueError):explain('test-secret',model,{})
