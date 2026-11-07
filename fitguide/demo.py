@@ -38,11 +38,15 @@ def seed_demo(real_path, *, reset=False, today=None):
         db.execute('CREATE TABLE IF NOT EXISTS demo_info (id INTEGER PRIMARY KEY, generated_on TEXT NOT NULL)')
         if db.execute('SELECT 1 FROM demo_info WHERE id=1').fetchone() and not reset:
             return store
-        for table in ('profile', 'workout_sets', 'body_weights', 'workout_draft', 'routines', 'demo_info'):
+        for table in ('profile', 'workout_sets', 'body_weights', 'workout_draft', 'routines', 'food_catalog', 'food_intake', 'demo_info'):
             db.execute(f'DELETE FROM {table}')
         db.execute('INSERT INTO profile VALUES(1,?)', (json.dumps(profile, ensure_ascii=False),))
         db.executemany('INSERT INTO workout_sets(day,exercise,weight,reps) VALUES(?,?,?,?)', rows)
         db.executemany('INSERT INTO body_weights VALUES(?,?)', weights)
+        sample = json.dumps(dict(kcal=200., protein=10., carbs=25., fat=6.))
+        db.execute('INSERT INTO food_catalog VALUES(?,?,?)', ('가상 식사 샘플',sample,'시연용 합성 수치 — 실제 식품 아님'))
+        db.execute('INSERT INTO food_intake(day,mealtime,name,grams,payload,source) VALUES(?,?,?,?,?,?)',
+                   (today.isoformat(),'점심','가상 식사 샘플',150.,sample,'시연용 합성 수치 — 실제 식품 아님'))
         routine = [dict(name=name, sets=[dict(weight=float(base), reps=10) for _ in range(3)])
                    for name, base in exercises[:3]]
         db.execute('INSERT INTO routines VALUES(?,?)', ('가상 상체 루틴', json.dumps(routine, ensure_ascii=False)))

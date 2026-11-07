@@ -10,6 +10,7 @@ from fitguide.workout_view import render_workout
 from fitguide.demo import select_store
 from fitguide.recommendation_view import render_recommendations
 from fitguide.food_view import render_food
+from fitguide.nutrition_view import render_nutrition
 
 SUMMARY_COLUMNS = {'day':'날짜', 'exercise':'운동', 'weight':'중량 (kg)', 'reps':'세트당 횟수', 'sets':'세트 수'}
 
@@ -17,7 +18,7 @@ st.set_page_config(page_title='FitGuide · 나의 운동 기록', page_icon='�
 st.title('FitGuide')
 st.caption('기록에서 시작하는 나의 변화')
 store = select_store(os.environ.get('FITGUIDE_DB', str(Path(__file__).parent/'data'/'fitguide.db')))
-labels = ['홈', '내 목표', '운동 기록', '기록 내역', '분석', '운동 추천', '식사 가이드']
+labels = ['홈', '내 목표', '운동 기록', '기록 내역', '분석', '운동 추천', '식사 가이드', '식사 기록·AI']
 tabs = st.tabs(labels, key='page', on_change='rerun')
 page = st.session_state['page']
 
@@ -77,6 +78,8 @@ with tabs[labels.index(page)]:
         render_recommendations(store)
     elif page == '식사 가이드':
         render_food(store)
+    elif page == '식사 기록·AI':
+        render_nutrition(store)
     elif page == '분석':
         render_analysis(store)
     else:

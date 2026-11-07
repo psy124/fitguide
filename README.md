@@ -120,6 +120,14 @@ python -m venv .venv
 - 통밀빵은 제품별 조성 차이를 고려하여 밀·우유·달걀·대두로 보수적으로 표시했습니다. 실제 제품 표시를 확인하세요.
 - 원재료/알레르기 표시 및 교차접촉 안내 출처: [FDA Food Allergies](https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/food-allergies).
 
+## 식사 기록 및 AI 설명
+
+**식사 기록·AI** 탭에서 식품의 100g당 영양 표시를 등록하고 섭취량을 기록합니다.
+오늘 식사 합계와 운동 목표·컨디션·기존 추천 후보를 모아 선택적으로 AI 설명을 요청할 수 있습니다.
+API 키가 없어도 식사 기록·합계·기본 추천을 사용합니다.
+설정과 제한은 [식사 기록 및 AI 사용법](docs/NUTRITION_AI.md)을 참고하세요.
+2026-11-07 데스크톱 갱신본은 `releases/2026-11-07/FitGuide/FitGuide.exe`입니다.
+
 ## 문서
 
 - [기능 명세](docs/SPEC.md)

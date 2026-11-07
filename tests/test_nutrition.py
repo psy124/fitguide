@@ -1,0 +1,57 @@
+from datetime import date
+import io,json
+import pytest
+from streamlit.testing.v1 import AppTest
+from fitguide.storage import Store
+from fitguide.nutrition import *
+from fitguide.coach import context,explain
+from test_app import APP,switch_tab
+
+
+def test_nutrition_snapshot_crud_and_validation(tmp_path):
+    s=Store(tmp_path/'test.db');v=dict(kcal=200.,protein=10.,carbs=25.,fat=6.)
+    save_food(s,'테스트',v,'라벨');f=foods(s)[0]
+    save_intake(s,date.today(),'점심',f,150)
+    r=intakes(s,date.today());assert totals(r)['kcal']==300
+    save_food(s,'테스트',dict(v,kcal=100),'수정')
+    assert totals(intakes(s,date.today()))['kcal']==300
+    save_intake(s,date.today(),'저녁',r[0],200,r[0]['id'])
+    assert totals(intakes(s,date.today()))['protein']==20
+    for grams in [0,float('nan'),5001]:
+        with pytest.raises(ValueError): save_intake(s,date.today(),'점심',f,grams)
+    delete_intake(s,r[0]['id']);assert intakes(s,date.today())==[]
+
+
+def test_context_gates_and_no_nutrition_invention(tmp_path):
+    s=Store(tmp_path/'test.db')
+    assert context(s,date.today(),30,'보통',False)['exercises']
+    assert not context(s,date.today(),30,'보통',True)['exercises']
+    assert not context(s,date.today(),30,'높음',False)['exercises']
+    assert len(context(s,date.today(),15,'보통',False)['exercises'])<=1
+    assert context(s,date.today(),0,'보통',False)['meal_count']==0
+
+
+def test_ai_request_and_error_redaction(monkeypatch):
+    def fake(request,timeout):
+        data=json.loads(request.data);assert data['store'] is False
+        assert timeout==30 and data['input']=='{}'
+        return io.BytesIO(json.dumps({'status':'completed','output':[{'type':'message','content':[{'type':'output_text','text':'검토용 설명'}]}]}).encode())
+    monkeypatch.setattr('urllib.request.urlopen',fake)
+    assert explain('test-secret','test-model',{})=='검토용 설명'
+    def failed(*args,**kwargs): raise RuntimeError('test-secret')
+    monkeypatch.setattr('urllib.request.urlopen',failed)
+    with pytest.raises(ValueError,match='AI 응답') as e: explain('test-secret','test-model',{})
+    assert 'test-secret' not in str(e.value)
+
+
+def test_intake_ui(tmp_path,monkeypatch):
+    p=tmp_path/'ui.db';monkeypatch.setenv('FITGUIDE_DB',str(p));s=Store(p)
+    save_food(s,'테스트',dict(kcal=200.,protein=10.,carbs=25.,fat=6.),'라벨')
+    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록·AI')
+    next(b for b in at.button if b.label=='식사 기록 저장').click().run()
+    assert not at.exception and len(intakes(s,date.today()))==1
+    assert at.metric[0].value=='200.0'
+    assert next(b for b in at.button if b.label=='AI 설명 요청').disabled
+    next(c for c in at.checkbox if c.label=='현재 통증 또는 운동하기 불편한 증상이 있음').check().run()
+    assert not any(b.key and b.key.startswith('coach_add_') for b in at.button)
+    assert not at.exception

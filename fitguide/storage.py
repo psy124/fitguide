@@ -93,7 +93,12 @@ class Store:
                     day TEXT PRIMARY KEY, weight REAL NOT NULL CHECK(weight>0));
                 CREATE TABLE IF NOT EXISTS workout_draft (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS routines (name TEXT PRIMARY KEY, payload TEXT NOT NULL);
-                PRAGMA user_version=2;
+                CREATE TABLE IF NOT EXISTS food_catalog (
+                    name TEXT PRIMARY KEY, payload TEXT NOT NULL, source TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS food_intake (
+                    id INTEGER PRIMARY KEY, day TEXT NOT NULL, mealtime TEXT NOT NULL,
+                    name TEXT NOT NULL, grams REAL NOT NULL, payload TEXT NOT NULL, source TEXT NOT NULL);
+                PRAGMA user_version=3;
             ''')
 
     @contextmanager
