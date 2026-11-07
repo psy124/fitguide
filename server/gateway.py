@@ -13,7 +13,7 @@ from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from fitguide.ai_provider import explain
+from fitguide.ai_provider import explain, ProviderError
 
 KST=timezone(timedelta(hours=9))
 MAX_BODY=16384
@@ -96,6 +96,9 @@ class Gateway:
             quota=self.usage(user,reserve=True)
             # Failed upstream attempts stay charged, capping retries and cost.
             try: answer=self.provider(payload)
+            except ProviderError as exc:
+                print('Gemini diagnostic: '+exc.code, file=sys.stderr, flush=True)
+                raise GatewayError(502,'AI 연결에 실패했습니다. 기본 추천을 사용하세요. 이 시도는 일일 횟수에 포함됩니다.') from None
             except Exception: raise GatewayError(502,'AI 연결에 실패했습니다. 기본 추천을 사용하세요. 이 시도는 일일 횟수에 포함됩니다.') from None
             return dict(answer=answer,**quota)
         finally:
