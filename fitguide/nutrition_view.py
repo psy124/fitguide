@@ -1,17 +1,22 @@
 from datetime import date
-import json
-import hashlib
 import streamlit as st
 from .nutrition import NUTRIENTS, MEALTIMES, save_food, foods, save_intake, intakes, totals, delete_intake
-from .coach import context
-from .gateway_client import gateway_call, operator_connection
-from .recommendations import accept_recommendation
-from .food_view import render_food_preferences
-from .storage import EXERCISES
+from .ai_history import plans, set_plan_status
 
 
 def render_nutrition(store):
     st.title('식사 기록')
+    with st.expander('AI에서 추가한 식사 후보'):
+        st.caption('식사 계획입니다. 완료 표시만으로 섭취 기록이나 영양 합계에 포함되지 않습니다.')
+        items=plans(store)
+        if not items: st.info('AI 추천에서 식사 후보를 추가하면 여기에 표시됩니다.')
+        statuses={'pending':'예정','done':'완료','cancelled':'취소'}
+        for plan in items:
+            st.write(f"{plan['planned_day']} · {plan['mealtime']} · {plan['item']['name']} · {statuses[plan['status']]}")
+            st.caption(', '.join(plan['item']['ingredients']))
+            status=st.selectbox('계획 상태',list(statuses),index=list(statuses).index(plan['status']),format_func=lambda x:statuses[x],key='plan_status_'+plan['id'])
+            if st.button('상태 저장',key='plan_save_'+plan['id']):
+                set_plan_status(store,plan['id'],status);st.rerun()
     day=st.date_input('식사 날짜',date.today(),max_value=date.today(),key='intake_day')
     st.caption('영양 정보는 포장지 등 출처를 확인해 100g 기준으로 등록하세요. 하루 섭취량 전체가 아니라 입력한 음식만 합산합니다.')
     with st.expander('음식 등록·영양 정보 수정'):
@@ -58,54 +63,4 @@ def render_nutrition(store):
                 delete_intake(store,rid);st.rerun()
 
 
-def render_ai_recommendations(store):
-    st.title('AI 추천')
-    render_food_preferences(store)
-    with st.expander('추천에서 제외할 운동'):
-        p=store.profile()
-        excluded=st.multiselect('제외 종목',list(EXERCISES),default=p.get('excluded_exercises',[]),key='excluded_exercises')
-        if st.button('제외 설정 저장'):
-            p['excluded_exercises']=excluded
-            store.save_profile(p)
-            st.success('제외 설정을 저장했습니다.')
-    st.caption('오늘의 식사 기록과 최근 28일 운동을 사용합니다. 과거 날짜의 식사 요약은 식사 기록 탭에서 확인하세요.')
-    minutes=st.slider('오늘 운동 가능 시간 (분)',0,120,30,5)
-    fatigue=st.selectbox('오늘 피로도',['낮음','보통','높음'],index=1)
-    pain=st.checkbox('현재 통증 또는 운동하기 불편한 증상이 있음')
-    payload=context(store,date.today(),minutes,fatigue,pain)
-    signature=json.dumps(payload,sort_keys=True,ensure_ascii=False)
-    if st.session_state.get('coach_signature')!=signature:
-        st.session_state.pop('coach_answer',None)
-        st.session_state['coach_signature']=signature
-    st.write(f"오늘 입력한 음식 {payload['meal_count']}건 · {payload['nutrition']['kcal']} kcal · 단백질 {payload['nutrition']['protein']}g")
-    st.caption('입력 누락과 개인차가 있어 이 합계만으로 부족·과잉을 판정하지 않습니다. 먹은 음식을 상쇄하기 위한 운동량은 계산하지 않습니다.')
-    if not payload['exercises']:
-        st.info('현재 컨디션·시간 또는 추천 조건상 운동 후보를 표시하지 않습니다. 통증이 있으면 운동을 무리하게 진행하지 마세요.')
-    for item in payload['exercises']:
-        st.write('운동 후보: **'+item['name']+'** — '+', '.join(item['reasons']))
-        if st.button('진행 중 운동에 추가',key='coach_add_'+item['name']):
-            try:
-                accept_recommendation(store,item['name']);st.rerun()
-            except ValueError as exc: st.error(str(exc))
-    if not payload['meals']:
-        st.info('위의 나의 식사 조건에서 조건을 저장하거나 확인하세요.')
-    for item in payload['meals']:
-        st.write('다음 식사 후보: **'+item['name']+'** · '+', '.join(item['ingredients']))
-    st.subheader('AI 맞춤 설명')
-    url,code=operator_connection()
-    if not code:
-        st.caption('AI 서비스가 아직 설정되지 않았습니다. 운영자에게 문의하세요.')
-    st.caption('오늘의 식사·영양 합계, 운동 기록 요약, 목표와 컨디션을 시연 서버를 거쳐 Google Gemini로 전송합니다. 하루 요청 제한이 적용됩니다.')
-    consent_key=hashlib.sha256((signature+url+code).encode()).hexdigest()
-    consent=st.checkbox('추천에 필요한 요약 정보를 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
-    if st.button('AI 설명 요청',disabled=not(code and consent)):
-        try:
-            with st.spinner('AI 설명을 받고 있습니다… 최대 약 90초 걸릴 수 있습니다.'):
-                response=gateway_call(url,code,payload)
-                st.session_state['coach_answer']=response['answer']
-                st.success(f"오늘 남은 요청 {response['remaining']}회")
-        except ValueError as exc: st.error(str(exc))
-    if 'coach_answer' in st.session_state:
-        st.subheader('AI 설명 · 검토용')
-        st.write(st.session_state['coach_answer'])
-        st.caption('AI 설명은 오류가 있을 수 있으며 자동으로 기록·루틴을 변경하지 않습니다. 알레르기는 실제 식품 표시를 확인하세요.')
+from .ai_view import render_ai_recommendations

@@ -98,7 +98,10 @@ class Store:
                 CREATE TABLE IF NOT EXISTS food_intake (
                     id INTEGER PRIMARY KEY, day TEXT NOT NULL, mealtime TEXT NOT NULL,
                     name TEXT NOT NULL, grams REAL NOT NULL, payload TEXT NOT NULL, source TEXT NOT NULL);
-                PRAGMA user_version=3;
+                CREATE TABLE IF NOT EXISTS ai_recommendations(id TEXT PRIMARY KEY, created_at TEXT NOT NULL, model TEXT NOT NULL, context_json TEXT NOT NULL, result_json TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS ai_candidate_actions(recommendation_id TEXT, kind TEXT, candidate INTEGER, target_id TEXT, PRIMARY KEY(recommendation_id,kind,candidate));
+                CREATE TABLE IF NOT EXISTS meal_plans(id TEXT PRIMARY KEY, recommendation_id TEXT, candidate INTEGER, planned_day TEXT, mealtime TEXT, status TEXT, payload TEXT);
+                PRAGMA user_version=4;
             ''')
 
     @contextmanager
