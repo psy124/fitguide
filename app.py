@@ -16,7 +16,7 @@ st.set_page_config(page_title='FitGuide · 나의 운동 기록', page_icon='�
 st.title('FitGuide')
 st.caption('기록에서 시작하는 나의 변화')
 store = select_store(os.environ.get('FITGUIDE_DB', str(Path(__file__).parent/'data'/'fitguide.db')))
-labels = ['홈', '내 목표', '운동 기록', '기록 내역', '분석', '식사 기록', 'AI 추천']
+labels = ['홈', '내 목표', '운동 기록', '식사 기록', '분석', 'AI 추천', '기록 내역']
 if st.session_state.get('page') not in labels:
     st.session_state.pop('page', None)
 
