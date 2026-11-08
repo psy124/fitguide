@@ -62,8 +62,7 @@ def test_v2_transport_and_cache(tmp_path,monkeypatch):
         body=json.loads(request.data)
         assert 'workout_summary' in body['contents'][0]['parts'][0]['text']
         assert body['generationConfig']['responseMimeType']=='application/json'
-        schema=body['generationConfig']['responseJsonSchema']
-        assert schema['properties']['exercises']['items']['properties']['name']['enum']==p['exercises']
+        assert 'responseJsonSchema' not in body['generationConfig']
         return io.BytesIO(json.dumps({'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(response['recommendation'])}]}}]}).encode())
     monkeypatch.setattr('urllib.request.urlopen',fake)
     assert explain('test-key','gemini-test',p)==response

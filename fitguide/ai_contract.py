@@ -61,18 +61,3 @@ def validate_result(result,p):
                 need(isinstance(row['tools'],list) and all(x in p['food']['tools'] for x in row['tools']))
     return result
 
-
-def response_schema(p):
-    """Constrain generated JSON as well as validating it after generation."""
-    def text(limit): return {'type':'string','minLength':1,'maxLength':limit}
-    def obj(properties):return {'type':'object','properties':properties,'required':list(properties),'additionalProperties':False}
-    name=text(80)
-    if p['exercises']:name=dict(name,enum=p['exercises'])
-    exercise=obj(dict(name=name,reason=text(600),evidence=text(600)))
-    ingredient={'type':'string'}
-    if p['ingredients']:ingredient['enum']=p['ingredients']
-    food=p.get('food')
-    tool={'type':'string'}
-    if food and food['tools']:tool['enum']=food['tools']
-    meal=obj(dict(name=text(80),reason=text(600),evidence=text(600),ingredients={'type':'array','items':ingredient,'minItems':1,'maxItems':12},minutes={'type':'integer','minimum':1,'maximum':food['minutes'] if food else 120},tools={'type':'array','items':tool,'maxItems':len(food['tools']) if food else 0}))
-    return obj(dict(schema_version={'type':'integer','enum':[2]},exercise_summary=text(1500),meal_summary=text(1500),exercises={'type':'array','items':exercise,'maxItems':3 if p['exercises'] else 0},meals={'type':'array','items':meal,'maxItems':3 if p['ingredients'] and food else 0}))
