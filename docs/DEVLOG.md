@@ -292,3 +292,9 @@
 
 - 사용자 재시도 요청으로 구조화 출력 적용 후 가상 데이터 1회 호출: PROVIDER_UNAVAILABLE(HTTP 503). 구조화 설정의 성공 여부는 미확인. 빌드 및 실행 검증은 통과했으나 외부 서비스 가용성 문제는 해결 확인되지 않음.
 
+
+## 2026-11-08 — Gemini 3.8 요청 옵션 정정
+- 공식 최신 모델 안내에 따라 candidateCount 제거, gemini-3.8-flash에 thinkingLevel=low 지정. 모델/한도/90초 대기 설정 유지.
+- 참고: https://ai.google.dev/gemini-api/docs/latest-model 및 https://ai.google.dev/gemini-api/docs/generate-content/thinking
+- 관련 테스트 37개와 새 데스크톱 실행 검증 통과. 실제 서비스 지연의 원인으로 단정하지 않음.
+

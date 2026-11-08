@@ -104,3 +104,14 @@ def test_demo_reset_clears_only_demo_history(tmp_path):
     demo=seed_demo(real.path);p,r=fixture(demo);save_result(demo,p,r)
     seed_demo(real.path,reset=True)
     assert history(real) and not history(demo)
+
+
+def test_gemini38_low_thinking_no_unsupported_candidates(tmp_path,monkeypatch):
+    s=Store(tmp_path/'db');p,response=fixture(s)
+    def fake(request,timeout):
+        cfg=json.loads(request.data)['generationConfig']
+        assert 'candidateCount' not in cfg
+        assert cfg['thinkingConfig']=={'thinkingLevel':'low'}
+        return io.BytesIO(json.dumps({'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(response['recommendation'])}]}}]}).encode())
+    monkeypatch.setattr('urllib.request.urlopen',fake)
+    assert explain('dummy','gemini-3.8-flash',p)['model']=='gemini-3.8-flash'
