@@ -8,7 +8,7 @@ from fitguide.records import summarize_sets
 from fitguide.analysis_view import render_analysis
 from fitguide.workout_view import render_workout
 from fitguide.demo import select_store
-from fitguide.nutrition_view import render_nutrition
+from fitguide.nutrition_view import render_nutrition, render_ai_recommendations
 
 SUMMARY_COLUMNS = {'day':'날짜', 'exercise':'운동', 'weight':'중량 (kg)', 'reps':'세트당 횟수', 'sets':'세트 수'}
 
@@ -16,7 +16,7 @@ st.set_page_config(page_title='FitGuide · 나의 운동 기록', page_icon='�
 st.title('FitGuide')
 st.caption('기록에서 시작하는 나의 변화')
 store = select_store(os.environ.get('FITGUIDE_DB', str(Path(__file__).parent/'data'/'fitguide.db')))
-labels = ['홈', '내 목표', '운동 기록', '기록 내역', '분석', '식사 기록·AI']
+labels = ['홈', '내 목표', '운동 기록', '기록 내역', '분석', '식사 기록', 'AI 추천']
 if st.session_state.get('page') not in labels:
     st.session_state.pop('page', None)
 
@@ -41,7 +41,7 @@ with tabs[labels.index(page)]:
         else:
             st.subheader('최근 기록')
             st.dataframe(summarize_sets(rows)[:10], hide_index=True, column_config=SUMMARY_COLUMNS)
-        st.caption('분석 탭에서 기록의 변화를 확인하고, 식사 기록·AI에서 식사를 기록하고 오늘의 추천을 확인하세요.')
+        st.caption('분석 탭에서 기록의 변화를 확인하고, 식사 기록 탭에서 식사를 기록하고 AI 추천 탭에서 오늘의 추천을 확인하세요.')
 
     elif page == '내 목표':
         st.title('내 목표')
@@ -75,8 +75,10 @@ with tabs[labels.index(page)]:
                     st.error(str(exc))
     elif page == '운동 기록':
         render_workout(store)
-    elif page == '식사 기록·AI':
+    elif page == '식사 기록':
         render_nutrition(store)
+    elif page == 'AI 추천':
+        render_ai_recommendations(store)
     elif page == '분석':
         render_analysis(store)
     else:

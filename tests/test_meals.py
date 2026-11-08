@@ -45,13 +45,13 @@ def test_food_profile_validation_and_old_profile(tmp_path):
 
 def test_food_ui_save_reload_empty_and_demo(tmp_path,monkeypatch):
     path=tmp_path/'ui.db';monkeypatch.setenv('FITGUIDE_DB',str(path))
-    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록·AI')
+    at=AppTest.from_file(APP).run();switch_tab(at,'AI 추천')
     assert not at.exception and not any(s.value.startswith('조건에 맞는 예시') for s in at.subheader)
     at.multiselect[0].set_value(['우유','달걀'])
     next(b for b in at.button if b.label=='식사 조건 저장').click().run()
     assert at.success and not at.exception
     assert Store(path).profile()['food']['allergens']==['우유','달걀']
-    fresh=AppTest.from_file(APP).run();switch_tab(fresh,'식사 기록·AI')
+    fresh=AppTest.from_file(APP).run();switch_tab(fresh,'AI 추천')
     assert fresh.multiselect[0].value==['우유','달걀']
     fresh.multiselect[1].set_value(list(INGREDIENTS))
     next(b for b in fresh.button if b.label=='식사 조건 저장').click().run()
@@ -59,7 +59,7 @@ def test_food_ui_save_reload_empty_and_demo(tmp_path,monkeypatch):
     switch_tab(fresh,'내 목표')
     next(b for b in fresh.button if b.label=='목표 저장').click().run()
     assert Store(path).profile()['food']['excluded']==list(INGREDIENTS)
-    fresh.toggle(key='demo_mode').set_value(True).run();switch_tab(fresh,'식사 기록·AI')
+    fresh.toggle(key='demo_mode').set_value(True).run();switch_tab(fresh,'AI 추천')
     assert fresh.multiselect[0].value==[]
     next(b for b in fresh.button if b.label=='식사 조건 저장').click().run()
     assert Store(demo_path(path)).profile()['food']['excluded']==[]
