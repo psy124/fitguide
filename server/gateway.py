@@ -16,7 +16,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from fitguide.ai_provider import explain, ProviderError
 
 KST=timezone(timedelta(hours=9))
-MAX_BODY=16384
+MAX_BODY=65536
 
 
 class GatewayError(Exception):
@@ -25,6 +25,11 @@ class GatewayError(Exception):
 
 
 def validate_payload(p):
+    if isinstance(p,dict) and p.get('schema_version')==2:
+        from fitguide.ai_contract import validate_request
+        try: validate_request(p)
+        except (ValueError,TypeError,KeyError): raise GatewayError(400,'AI 요청 형식 또는 조건을 확인하세요.') from None
+        return
     required={'goal','day','meal_count','nutrition','meal_names','minutes','fatigue','pain','exercises','meals'}
     if not isinstance(p,dict) or set(p)!=required:
         raise GatewayError(400,'요청 형식이 올바르지 않습니다.')
@@ -60,10 +65,13 @@ class Gateway:
         self.db_path=Path(db_path);self.db_path.parent.mkdir(parents=True,exist_ok=True)
         self.users,self.provider=users,provider
         self.slots=threading.BoundedSemaphore(2)
+        self.request_lock=threading.Lock()
+        self.pending=set()
         self.user_limit,self.total_limit=user_limit,total_limit
         self.clock=clock or (lambda:datetime.now(KST))
         with sqlite3.connect(self.db_path) as db:
             db.execute('CREATE TABLE IF NOT EXISTS usage(day TEXT,user TEXT,count INTEGER NOT NULL,PRIMARY KEY(day,user))')
+            db.execute('CREATE TABLE IF NOT EXISTS request_cache(user TEXT,id TEXT,digest TEXT,response TEXT,PRIMARY KEY(user,id))')
 
     def authenticate(self,authorization):
         if not authorization.startswith('Bearer ') or len(authorization)>300:
@@ -88,6 +96,28 @@ class Gateway:
             return dict(day=day,remaining=max(0,min(self.user_limit-used,self.total_limit-total)),limit=self.user_limit)
 
     def request(self,authorization,payload):
+        if not isinstance(payload,dict) or payload.get('schema_version')!=2:
+            return self._request(authorization,payload)
+        user=self.authenticate(authorization);validate_payload(payload)
+        rid=payload['request_id'];key=(user,rid)
+        digest=hashlib.sha256(json.dumps(payload,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+        with self.request_lock:
+            with sqlite3.connect(self.db_path) as db:
+                row=db.execute('SELECT digest,response FROM request_cache WHERE user=? AND id=?',key).fetchone()
+            if row:
+                if row[0]!=digest:raise GatewayError(400,'같은 요청 ID에 다른 내용이 전달되었습니다.')
+                result=json.loads(row[1]);result.update(self.usage(user));return result
+            if key in self.pending:raise GatewayError(503,'같은 요청을 처리 중입니다.')
+            self.pending.add(key)
+        try:
+            result=self._request(authorization,payload)
+            with sqlite3.connect(self.db_path) as db:
+                db.execute('INSERT INTO request_cache VALUES(?,?,?,?)',(user,rid,digest,json.dumps(result,ensure_ascii=False)))
+            return result
+        finally:
+            with self.request_lock:self.pending.discard(key)
+
+    def _request(self,authorization,payload):
         user=self.authenticate(authorization)
         validate_payload(payload)
         if not self.slots.acquire(blocking=False):
@@ -98,9 +128,9 @@ class Gateway:
             try: answer=self.provider(payload)
             except ProviderError as exc:
                 print('Gemini diagnostic: '+exc.code, file=sys.stderr, flush=True)
-                raise GatewayError(502,'AI 연결에 실패했습니다. 기본 추천을 사용하세요. 이 시도는 일일 횟수에 포함됩니다.') from None
-            except Exception: raise GatewayError(502,'AI 연결에 실패했습니다. 기본 추천을 사용하세요. 이 시도는 일일 횟수에 포함됩니다.') from None
-            return dict(answer=answer,**quota)
+                raise GatewayError(502,'AI 연결에 실패했습니다. 저장된 추천 기록은 확인할 수 있습니다. 이 시도는 일일 횟수에 포함됩니다.') from None
+            except Exception: raise GatewayError(502,'AI 연결에 실패했습니다. 저장된 추천 기록은 확인할 수 있습니다. 이 시도는 일일 횟수에 포함됩니다.') from None
+            return dict(answer,**quota) if isinstance(answer,dict) else dict(answer=answer,**quota)
         finally:
             self.slots.release()
 

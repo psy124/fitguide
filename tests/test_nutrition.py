@@ -27,7 +27,7 @@ def test_context_gates_and_no_nutrition_invention(tmp_path):
     assert context(s,date.today(),30,'보통',False)['exercises']
     assert not context(s,date.today(),30,'보통',True)['exercises']
     assert not context(s,date.today(),30,'높음',False)['exercises']
-    assert len(context(s,date.today(),15,'보통',False)['exercises'])<=1
+    assert len(context(s,date.today(),15,'보통',False)['exercises'])>1 # allowed catalog, not preselected recommendations
     assert context(s,date.today(),0,'보통',False)['meal_count']==0
 
 
@@ -55,10 +55,10 @@ def test_intake_ui(tmp_path,monkeypatch):
     next(b for b in at.button if b.label=='식사 기록 저장').click().run()
     assert not at.exception and len(intakes(s,date.today()))==1
     assert at.metric[0].value=='200.0'
-    assert not any(b.label=='AI 설명 요청' for b in at.button)
+    assert not any(b.label=='AI 추천 생성' for b in at.button)
     switch_tab(at,'AI 추천')
     assert not any(b.label=='식사 기록 저장' for b in at.button)
-    assert next(b for b in at.button if b.label=='AI 설명 요청').disabled
+    assert next(b for b in at.button if b.label=='AI 추천 생성').disabled
     next(c for c in at.checkbox if c.label=='현재 통증 또는 운동하기 불편한 증상이 있음').check().run()
     assert not any(b.key and b.key.startswith('coach_add_') for b in at.button)
     assert not at.exception
@@ -88,16 +88,16 @@ def test_operator_connection_ui(tmp_path,monkeypatch):
     def fake_gateway(url,code,payload):
         calls.append((url,code,payload))
         return {'answer':'테스트 설명','remaining':9}
-    monkeypatch.setattr('fitguide.nutrition_view.gateway_call',fake_gateway)
+    monkeypatch.setattr('fitguide.ai_view.gateway_call',fake_gateway)
     at=AppTest.from_file(APP).run();switch_tab(at,'AI 추천')
     at.session_state['gateway_url']='https://untrusted.example'
     at.session_state['gateway_code']='user-modified'
     at.run()
     assert not any(w.label in ('시연 서버 주소','시연 사용자 코드') for w in at.text_input)
     assert not at.get('json')
-    assert next(b for b in at.button if b.label=='AI 설명 요청').disabled
+    assert next(b for b in at.button if b.label=='AI 추천 생성').disabled
     next(c for c in at.checkbox if c.key and c.key.startswith('coach_consent_')).check().run()
-    next(b for b in at.button if b.label=='AI 설명 요청').click().run()
+    next(b for b in at.button if b.label=='AI 추천 생성').click().run()
     assert not at.exception
     assert calls[0][:2]==('http://127.0.0.1:8765','operator-test-code')
 

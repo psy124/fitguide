@@ -32,12 +32,12 @@ def gateway_call(url,code,payload=None,timeout=105):
     except urllib.error.HTTPError as e:
         messages={401:'시연 사용자 코드가 올바르지 않거나 사용 권한이 해제되었습니다.',
                   429:'오늘의 사용자 또는 서버 전체 요청 한도를 사용했습니다. 한국 시간 자정 이후 다시 시도하세요.',
-                  502:'AI 서비스 연결 실패입니다. 시도 횟수는 차감됩니다. 기본 추천을 사용하세요.',
+                  502:'AI 서비스 연결 실패입니다. 시도 횟수는 차감됩니다. 저장된 추천 기록은 확인할 수 있습니다.',
                   503:'다른 요청을 처리 중입니다. 잠시 후 다시 시도하세요.',
                   400:'요청 내용을 확인하세요.',413:'요청 내용이 너무 큽니다.'}
         raise ValueError(messages.get(e.code,'서버 요청에 실패했습니다. 서버 주소·설정을 확인하세요.')) from None
     except Exception:
-        raise ValueError('시연 서버에 연결할 수 없습니다. 서버 실행 여부와 주소를 확인하세요. 기본 추천은 계속 사용할 수 있습니다.') from None
+        raise ValueError('시연 서버에 연결할 수 없습니다. 서버 실행 여부와 주소를 확인하세요. 저장된 추천 기록은 확인할 수 있습니다.') from None
 
 
 def operator_connection():

@@ -64,7 +64,7 @@ def seed_demo(real_path, *, reset=False, today=None):
         if db.execute('SELECT 1 FROM demo_info WHERE id=1').fetchone() and not reset:
             add_demo_meals(db,today)
             return store
-        for table in ('profile', 'workout_sets', 'body_weights', 'workout_draft', 'routines', 'food_catalog', 'food_intake', 'demo_info'):
+        for table in ('profile', 'workout_sets', 'body_weights', 'workout_draft', 'routines', 'food_catalog', 'food_intake', 'ai_recommendations', 'ai_candidate_actions', 'meal_plans', 'demo_info'):
             db.execute(f'DELETE FROM {table}')
         db.execute('INSERT INTO profile VALUES(1,?)', (json.dumps(profile, ensure_ascii=False),))
         db.executemany('INSERT INTO workout_sets(day,exercise,weight,reps) VALUES(?,?,?,?)', rows)
