@@ -39,3 +39,14 @@ https://developer.microsoft.com/microsoft-edge/webview2/
 - pywebview 패키징: https://pywebview.flowrl.com/guide/freezing
 - PyInstaller 실행 경로: https://pyinstaller.org/en/stable/runtime-information.html
 - 창 전용 실행기와 별도 서버 프로세스를 사용하며, 시스템에 이미 떠 있는 웹 서버는 종료하지 않습니다.
+
+
+## 운영자 PC에서 AI 서버 자동 시작 (2026-11-08)
+1. 프로젝트의 `setup-auto-ai.cmd`를 한 번 실행하고 Gemini API 키를 입력합니다.
+2. `releases/auto-ai/FitGuide/FitGuide.exe`를 실행하면 AI 서버가 백그라운드에서 함께 시작됩니다.
+3. 앱을 닫으면 앱이 시작한 서버도 종료됩니다. 이미 따로 실행한 서버는 인증 확인 후 재사용하며 종료하지 않습니다.
+키는 `%LOCALAPPDATA%/FitGuide/ai-key.dpapi`에 Windows 현재 사용자 DPAPI로 암호화해 저장합니다.
+같은 Windows 계정 권한의 프로그램이나 관리자까지 방어하는 구조는 아닙니다. 키는 배포 앱·GitHub에 포함하지 않습니다.
+자동 시작 설정은 `ai-autostart.json`에 원본 운영자 설정 경로를 참조하며, 기존 사용자 코드와 `usage.sqlite3` 한도를 유지합니다. 원본 프로젝트 서버 폴더를 이동/삭제하지 마세요.
+비활성화하려면 운영자가 `ai-autostart.json`을 삭제합니다. 키 변경은 설정 CMD를 다시 실행합니다.
+사용자용 앱에는 등록 UI가 없습니다. 설정되지 않은 다른 PC는 서버를 자동으로 열지 않습니다.

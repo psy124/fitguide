@@ -3,7 +3,7 @@ streamlit_data, streamlit_bins, streamlit_hidden = collect_all('streamlit')
 a = Analysis(['desktop.py'], pathex=[],
     binaries=streamlit_bins,
     datas=streamlit_data + copy_metadata('streamlit') + [('app.py','.'), ('fitguide','fitguide')],
-    hiddenimports=streamlit_hidden + collect_submodules('fitguide') + ['webview.platforms.edgechromium','webview.platforms.winforms'],
+    hiddenimports=streamlit_hidden + collect_submodules('fitguide') + ['server.gateway','webview.platforms.edgechromium','webview.platforms.winforms'],
     excludes=['pytest','tkinter'], noarchive=False)
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='FitGuide', debug=False,

@@ -20,7 +20,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs): return None
 
 
-def gateway_call(url,code,payload=None):
+def gateway_call(url,code,payload=None,timeout=105):
     base=server_url(url)
     if not code.strip(): raise ValueError('시연 사용자 코드를 입력하세요.')
     path='/usage' if payload is None else '/recommend'
@@ -28,7 +28,7 @@ def gateway_call(url,code,payload=None):
         headers={'Authorization':'Bearer '+code.strip(),'Content-Type':'application/json'})
     try:
         opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
-        with opener.open(request,timeout=105) as response: return json.load(response)
+        with opener.open(request,timeout=timeout) as response: return json.load(response)
     except urllib.error.HTTPError as e:
         messages={401:'시연 사용자 코드가 올바르지 않거나 사용 권한이 해제되었습니다.',
                   429:'오늘의 사용자 또는 서버 전체 요청 한도를 사용했습니다. 한국 시간 자정 이후 다시 시도하세요.',
