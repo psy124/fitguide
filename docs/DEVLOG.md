@@ -300,3 +300,9 @@
 
 
 - 실제 가상 데이터 호출은 85.4초 후 INVALID_ARGUMENT 반환. 원인 특정 불가. 새 thinkingConfig는 검증 실패로 배포에서 제외하고 candidateCount 제거만 유지. TIMEOUT 해결 확인되지 않음.
+
+
+## 2026-11-08 — JSON 스키마 요청 거절 해결
+- 최신 실행 경로와 최근 INVALID_ARGUMENT 로그 확인. 사용자 화면에서 해당 코드가 일반 실패로 표시되는 누락 수정.
+- 가상 데이터 비교: responseJsonSchema 포함 시 HTTP 400, 해당 옵션만 제외한 JSON 모드에서 운동 3개/식사 3개 정상 반환(호출 프로세스 약 3초).
+- responseJsonSchema 전송 제거, responseMimeType=application/json 및 서버/클라이언트 validate_result 조건 검증 유지. 키/실제 기록 미출력·미전송.

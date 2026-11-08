@@ -36,6 +36,8 @@ def gateway_call(url,code,payload=None,timeout=105):
                   503:'다른 요청을 처리 중입니다. 잠시 후 다시 시도하세요.',
                   400:'요청 내용을 확인하세요.',413:'요청 내용이 너무 큽니다.'}
         diagnostics={
+            'INVALID_ARGUMENT':'Gemini가 요청 형식을 거절했습니다. 앱과 서버 버전을 확인하세요.',
+            'BAD_REQUEST':'Gemini가 요청을 거절했습니다. 운영자 설정을 확인하세요.',
             'PROVIDER_UNAVAILABLE':'Gemini 서비스가 일시적으로 응답할 수 없습니다.',
             'TIMEOUT':'Gemini 응답 대기 시간을 초과했습니다.',
             'OUTPUT_LIMIT':'AI 답변이 길이 제한으로 끝나지 못했습니다.',
