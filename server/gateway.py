@@ -20,8 +20,8 @@ MAX_BODY=65536
 
 
 class GatewayError(Exception):
-    def __init__(self,status,message):
-        self.status,self.message=status,message
+    def __init__(self,status,message,diagnostic=None):
+        self.status,self.message,self.diagnostic=status,message,diagnostic
 
 
 def validate_payload(p):
@@ -127,8 +127,13 @@ class Gateway:
             # Failed upstream attempts stay charged, capping retries and cost.
             try: answer=self.provider(payload)
             except ProviderError as exc:
-                print('Gemini diagnostic: '+exc.code, file=sys.stderr, flush=True)
-                raise GatewayError(502,'AI 연결에 실패했습니다. 저장된 추천 기록은 확인할 수 있습니다. 이 시도는 일일 횟수에 포함됩니다.') from None
+                try:
+                    with (self.db_path.parent/'gateway-errors.log').open('a',encoding='utf-8') as log:
+                        log.write(datetime.now(KST).isoformat()+' '+exc.code+'\n')
+                except OSError: pass
+                if sys.stderr is not None:
+                    print('Gemini diagnostic: '+exc.code, file=sys.stderr, flush=True)
+                raise GatewayError(502,'AI 응답 처리에 실패했습니다.',exc.code) from None
             except Exception: raise GatewayError(502,'AI 연결에 실패했습니다. 저장된 추천 기록은 확인할 수 있습니다. 이 시도는 일일 횟수에 포함됩니다.') from None
             return dict(answer,**quota) if isinstance(answer,dict) else dict(answer=answer,**quota)
         finally:
@@ -161,7 +166,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.path!='/usage': return self.respond(404,dict(error='경로 없음'))
             user=self.server.gateway.authenticate(self.headers.get('Authorization',''))
             self.respond(200,self.server.gateway.usage(user))
-        except GatewayError as e: self.respond(e.status,dict(error=e.message))
+        except GatewayError as e: self.respond(e.status,dict(error=e.message,diagnostic=e.diagnostic))
     def do_POST(self):
         try:
             if self.path!='/recommend': return self.respond(404,dict(error='경로 없음'))
@@ -174,7 +179,7 @@ class Handler(BaseHTTPRequestHandler):
             if len(raw)!=length: raise GatewayError(400,'요청이 완전하지 않습니다.')
             payload=json.loads(raw)
             self.respond(200,self.server.gateway.request(auth,payload))
-        except GatewayError as e: self.respond(e.status,dict(error=e.message))
+        except GatewayError as e: self.respond(e.status,dict(error=e.message,diagnostic=e.diagnostic))
         except (ValueError,TypeError,TimeoutError): self.respond(400,dict(error='요청을 읽을 수 없습니다.'))
         except Exception: self.respond(500,dict(error='서버 오류입니다. 잠시 후 다시 시도하세요.'))
 

@@ -35,6 +35,22 @@ def gateway_call(url,code,payload=None,timeout=105):
                   502:'AI 서비스 연결 실패입니다. 시도 횟수는 차감됩니다. 저장된 추천 기록은 확인할 수 있습니다.',
                   503:'다른 요청을 처리 중입니다. 잠시 후 다시 시도하세요.',
                   400:'요청 내용을 확인하세요.',413:'요청 내용이 너무 큽니다.'}
+        diagnostics={
+            'PROVIDER_UNAVAILABLE':'Gemini 서비스가 일시적으로 응답할 수 없습니다.',
+            'TIMEOUT':'Gemini 응답 대기 시간을 초과했습니다.',
+            'OUTPUT_LIMIT':'AI 답변이 길이 제한으로 끝나지 못했습니다.',
+            'INVALID_RESPONSE_FORMAT':'AI 답변이 후보 형식이나 허용 조건을 충족하지 못했습니다.',
+            'BLOCKED_OR_INCOMPLETE':'AI 답변이 차단되었거나 완료되지 않았습니다.',
+            'EMPTY_RESPONSE':'AI가 비어 있는 답변을 반환했습니다.',
+            'PROVIDER_QUOTA':'Google API 사용 한도에 도달했습니다.',
+            'API_KEY_INVALID':'운영자 API 키를 확인해야 합니다.',
+            'NETWORK':'서버에서 Google API에 연결하지 못했습니다.'}
+        try:
+            diagnostic=json.loads(e.read(16384)).get('diagnostic')
+            detail=diagnostics.get(diagnostic) if isinstance(diagnostic,str) else None
+        except (ValueError,TypeError,AttributeError,OSError):detail=None
+        if e.code==502 and detail:
+            raise ValueError(detail+' ['+diagnostic+'] 이번 시도는 일일 횟수에 포함됩니다.') from None
         raise ValueError(messages.get(e.code,'서버 요청에 실패했습니다. 서버 주소·설정을 확인하세요.')) from None
     except Exception:
         raise ValueError('시연 서버에 연결할 수 없습니다. 서버 실행 여부와 주소를 확인하세요. 저장된 추천 기록은 확인할 수 있습니다.') from None

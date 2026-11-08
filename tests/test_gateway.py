@@ -81,3 +81,18 @@ def test_diagnostic_compares_real_transport(monkeypatch,capsys):
     monkeypatch.setattr(diagnostic,'probe',lambda key,model:False)
     diagnostic.compare_requests('private-key','gemini-test')
     assert not calls
+
+
+def test_provider_diagnostic_in_windowless_mode(tmp_path,monkeypatch):
+    from fitguide.ai_provider import ProviderError
+    import server.gateway as module
+    def fail(p):raise ProviderError('INVALID_RESPONSE_FORMAT')
+    monkeypatch.setattr(module.sys,'stderr',None)
+    server=Server(('127.0.0.1',0),Gateway(tmp_path/'quota',USERS,fail))
+    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    try:
+        with pytest.raises(ValueError,match='INVALID_RESPONSE_FORMAT'):
+            gateway_call('http://127.0.0.1:'+str(server.server_address[1]),TOKEN,PAYLOAD)
+        log=(tmp_path/'gateway-errors.log').read_text(encoding='utf-8')
+        assert 'INVALID_RESPONSE_FORMAT' in log and TOKEN not in log
+    finally:server.shutdown();server.server_close();thread.join()
