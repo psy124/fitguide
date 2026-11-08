@@ -39,9 +39,9 @@ def test_ai_request_and_error_redaction(monkeypatch):
         assert request.get_header('X-goog-api-key')=='test-secret'
         assert 'test-secret' not in request.full_url
         assert request.full_url.endswith('/gemini-test:generateContent')
-        return io.BytesIO(json.dumps({'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'숨길 추론','thought':True},{'text':'검토용 설명'}]}}]}).encode())
+        return io.BytesIO(json.dumps({'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':'숨길 추론','thought':True},{'text':json.dumps({'exercise':'운동 설명','meal':'식사 설명'},ensure_ascii=False)}]}}]}).encode())
     monkeypatch.setattr('urllib.request.urlopen',fake)
-    assert explain('test-secret','gemini-test',{})=='검토용 설명'
+    assert explain('test-secret','gemini-test',{})=='### 1. 추천할 운동\n\n운동 설명\n\n### 2. 추천할 식사\n\n식사 설명'
     def failed(*args,**kwargs): raise RuntimeError('test-secret')
     monkeypatch.setattr('urllib.request.urlopen',failed)
     with pytest.raises(ValueError,match='AI 응답') as e: explain('test-secret','gemini-test',{})
@@ -128,3 +128,11 @@ def test_safe_http_reason(error,expected):
     from fitguide.ai_provider import http_diagnostic
     exc=urllib.error.HTTPError('https://example.com',400,'secret',{},io.BytesIO(json.dumps({'error':error}).encode()))
     assert http_diagnostic(exc)==expected
+
+
+@pytest.mark.parametrize('text',['자유 형식 응답','{}','{"exercise":"운동"}','{"exercise":"","meal":"식사"}'])
+def test_ai_requires_both_recommendation_sections(monkeypatch,text):
+    result={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':text}]}}]}
+    monkeypatch.setattr('urllib.request.urlopen',lambda *a,**k:io.BytesIO(json.dumps(result).encode()))
+    with pytest.raises(ValueError,match='INVALID_RESPONSE_FORMAT'):
+        explain('test-secret','gemini-test',{})

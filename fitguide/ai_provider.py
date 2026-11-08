@@ -39,7 +39,13 @@ def explain(key, model, payload):
 후보가 없으면 새로운 후보를 만들지 않는다. pain=true면 운동 제안을 하지 않는다.
 영양 합계는 기록된 부분만이며 하루 필요량, 부족/과잉, 체중 감량 효과를 판정하지 않는다.
 음식을 운동으로 상쇄하거나 과도한 운동/절식을 권하지 않는다. 영양 수치·식재료·중량·세트 처방을 만들어내지 않는다.
-진단, 치료, 안전 보장 대신 불확실성과 기록 누락을 명시한다. 600자 이내로 답한다.'''
+진단, 치료, 안전 보장 대신 불확실성과 기록 누락을 명시한다.
+반드시 JSON 객체 하나만 반환한다. 키는 exercise와 meal 두 개이며 값은 각각 비어 있지 않은 한국어 문자열이다.
+exercise: 추천 운동명과 입력의 목표·운동 가능 시간·피로도·exercises.reasons에 근거한 이유를 쓴다.
+운동 후보가 없으면 현재 조건상 추천을 보류하는 이유를 쓰며, 입력에 없는 운동 기록이나 수행량을 추측하지 않는다.
+meal: 추천 식사명·제공된 재료와 meal_names·nutrition의 기록에 근거한 이유를 쓴다.
+식사 기록이 없으면 그 사실을 명시하고, 식사 후보가 없으면 식사 조건 등록/확인이 필요하다고 안내한다.
+JSON 외의 머리말·맺음말·코드 블록은 쓰지 않는다. 두 문자열 합계 600자 이내로 쓴다.'''
     body={
         'systemInstruction': {'parts':[{'text':instructions}]},
         'contents':[{'role':'user','parts':[{'text':json.dumps(payload,ensure_ascii=False)}]}],
@@ -59,7 +65,13 @@ def explain(key, model, payload):
                          if isinstance(part.get('text'),str) and not part.get('thought',False))
         if not output.strip():
             raise ProviderError('EMPTY_RESPONSE')
-        return output
+        try:
+            sections=json.loads(output)
+            if not isinstance(sections,dict) or set(sections)!={'exercise','meal'} or not all(isinstance(v,str) and v.strip() for v in sections.values()):
+                raise ValueError()
+        except (ValueError,TypeError):
+            raise ProviderError('INVALID_RESPONSE_FORMAT') from None
+        return '### 1. 추천할 운동\n\n'+sections['exercise'].strip()+'\n\n### 2. 추천할 식사\n\n'+sections['meal'].strip()
     except ProviderError:
         raise
     except urllib.error.HTTPError as exc:
