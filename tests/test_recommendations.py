@@ -66,21 +66,21 @@ def test_accept_previous_values_and_start_new(tmp_path):
 
 def test_recommendation_ui_and_exclusions(tmp_path,monkeypatch):
     path=tmp_path/'ui.db';monkeypatch.setenv('FITGUIDE_DB',str(path))
-    at=AppTest.from_file(APP).run();switch_tab(at,'운동 추천')
+    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록·AI')
     assert not at.exception
-    button=next(b for b in at.button if b.key and b.key.startswith('recommend_'))
-    name=button.key.removeprefix('recommend_')
+    button=next(b for b in at.button if b.key and b.key.startswith('coach_add_'))
+    name=button.key.removeprefix('coach_add_')
     button.click().run()
-    assert not at.exception and at.success
+    assert not at.exception
     s=Store(path)
     assert s.draft()['exercises'][0]['name']==name
-    assert all(b.key!='recommend_'+name for b in at.button)
+    assert all(b.key!='coach_add_'+name for b in at.button)
     switch_tab(at,'운동 기록')
     assert at.number_input and not at.exception
-    switch_tab(at,'운동 추천')
+    switch_tab(at,'식사 기록·AI')
     at.multiselect(key='excluded_exercises').set_value(list(EXERCISES))
     next(b for b in at.button if b.label=='제외 설정 저장').click().run()
-    assert not any(b.key and b.key.startswith('recommend_') for b in at.button)
+    assert not any(b.key and b.key.startswith('coach_add_') for b in at.button)
     assert not at.exception
     switch_tab(at,'내 목표')
     next(b for b in at.button if b.label=='목표 저장').click().run()

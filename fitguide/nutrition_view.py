@@ -6,6 +6,8 @@ from .nutrition import NUTRIENTS, MEALTIMES, save_food, foods, save_intake, inta
 from .coach import context
 from .gateway_client import gateway_call, operator_connection
 from .recommendations import accept_recommendation
+from .food_view import render_food_preferences
+from .storage import EXERCISES
 
 
 def render_nutrition(store):
@@ -57,6 +59,14 @@ def render_nutrition(store):
                 if st.button('식사 삭제',disabled=not confirm):
                     delete_intake(store,rid);st.rerun()
     with coach:
+        render_food_preferences(store)
+        with st.expander('추천에서 제외할 운동'):
+            p=store.profile()
+            excluded=st.multiselect('제외 종목',list(EXERCISES),default=p.get('excluded_exercises',[]),key='excluded_exercises')
+            if st.button('제외 설정 저장'):
+                p['excluded_exercises']=excluded
+                store.save_profile(p)
+                st.success('제외 설정을 저장했습니다.')
         st.caption('오늘의 식사 기록과 최근 28일 운동을 사용합니다. 과거 날짜의 식사 요약은 첫 번째 탭에서 확인하세요.')
         minutes=st.slider('오늘 운동 가능 시간 (분)',0,120,30,5)
         fatigue=st.selectbox('오늘 피로도',['낮음','보통','높음'],index=1)
@@ -77,7 +87,7 @@ def render_nutrition(store):
                     accept_recommendation(store,item['name']);st.rerun()
                 except ValueError as exc: st.error(str(exc))
         if not payload['meals']:
-            st.info('식사 가이드에서 식사 조건을 저장하거나 후보 조건을 확인하세요.')
+            st.info('위의 나의 식사 조건에서 조건을 저장하거나 확인하세요.')
         for item in payload['meals']:
             st.write('다음 식사 후보: **'+item['name']+'** · '+', '.join(item['ingredients']))
         st.subheader('AI 맞춤 설명')
