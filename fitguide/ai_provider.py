@@ -62,8 +62,6 @@ workout_summary는 최근 28일 실제 기록 요약이다. meal_names와 nutrit
         'contents':[{'role':'user','parts':[{'text':json.dumps(payload,ensure_ascii=False)}]}],
         'generationConfig':{'maxOutputTokens':4096 if payload.get('schema_version')==2 else 2048},
     }
-    if model=='gemini-3.8-flash':
-        body['generationConfig']['thinkingConfig']={'thinkingLevel':'low'}
     if payload.get('schema_version')==2:
         from .ai_contract import response_schema
         body['generationConfig'].update(responseMimeType='application/json',responseJsonSchema=response_schema(payload))

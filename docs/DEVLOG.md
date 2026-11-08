@@ -298,3 +298,5 @@
 - 참고: https://ai.google.dev/gemini-api/docs/latest-model 및 https://ai.google.dev/gemini-api/docs/generate-content/thinking
 - 관련 테스트 37개와 새 데스크톱 실행 검증 통과. 실제 서비스 지연의 원인으로 단정하지 않음.
 
+
+- 실제 가상 데이터 호출은 85.4초 후 INVALID_ARGUMENT 반환. 원인 특정 불가. 새 thinkingConfig는 검증 실패로 배포에서 제외하고 candidateCount 제거만 유지. TIMEOUT 해결 확인되지 않음.
