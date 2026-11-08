@@ -33,11 +33,6 @@ def render_result(store,row,blocked=False):
             if st.button('추가됨' if ('meals',i) in added else '식사 후보 추가',key=f'ai_food_{rid}_{i}',disabled=('meals',i) in added):
                 try:add_candidate(store,rid,'meals',i,day,meal);st.rerun()
                 except ValueError as exc:st.error(str(exc))
-    with st.expander('추천 당시 기록 요약'):
-        p=row['context'];st.write(f"목표: {p['goal']} · 식사 {p['meal_count']}건 · 운동 가능 {p['minutes']}분 · 피로도 {p['fatigue']}")
-        st.write('기록한 음식: '+(', '.join(p['meal_names']) or '없음'))
-        st.write(p['nutrition'])
-        if p['workout_summary']:st.dataframe(p['workout_summary'],hide_index=True)
     st.caption('AI 답변은 오류가 있을 수 있습니다. 후보 추가는 실제 운동 완료나 음식 섭취를 기록하지 않습니다.')
 
 
