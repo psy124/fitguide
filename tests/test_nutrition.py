@@ -51,10 +51,13 @@ def test_ai_request_and_error_redaction(monkeypatch):
 def test_intake_ui(tmp_path,monkeypatch):
     p=tmp_path/'ui.db';monkeypatch.setenv('FITGUIDE_DB',str(p));s=Store(p)
     save_food(s,'테스트',dict(kcal=200.,protein=10.,carbs=25.,fat=6.),'라벨')
-    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록·AI')
+    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록')
     next(b for b in at.button if b.label=='식사 기록 저장').click().run()
     assert not at.exception and len(intakes(s,date.today()))==1
     assert at.metric[0].value=='200.0'
+    assert not any(b.label=='AI 설명 요청' for b in at.button)
+    switch_tab(at,'AI 추천')
+    assert not any(b.label=='식사 기록 저장' for b in at.button)
     assert next(b for b in at.button if b.label=='AI 설명 요청').disabled
     next(c for c in at.checkbox if c.label=='현재 통증 또는 운동하기 불편한 증상이 있음').check().run()
     assert not any(b.key and b.key.startswith('coach_add_') for b in at.button)
@@ -86,7 +89,7 @@ def test_operator_connection_ui(tmp_path,monkeypatch):
         calls.append((url,code,payload))
         return {'answer':'테스트 설명','remaining':9}
     monkeypatch.setattr('fitguide.nutrition_view.gateway_call',fake_gateway)
-    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록·AI')
+    at=AppTest.from_file(APP).run();switch_tab(at,'AI 추천')
     at.session_state['gateway_url']='https://untrusted.example'
     at.session_state['gateway_code']='user-modified'
     at.run()
