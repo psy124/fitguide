@@ -61,7 +61,7 @@ def render_ai_recommendations(store):
     signature=json.dumps({k:v for k,v in payload.items() if k!='request_id'},sort_keys=True,ensure_ascii=False)
     st.caption('최근 28일 운동 요약과 오늘 입력한 식사 기록을 바탕으로 AI가 추천합니다. 기록 누락을 영양 부족으로 판단하지 않습니다.')
     st.write(f"오늘 식사 {payload['meal_count']}건 · {payload['nutrition']['kcal']} kcal")
-    if not payload['food']:st.info('식사 추천을 받으려면 나의 식사 조건을 저장하세요.')
+    if not payload['food']:st.info('식사 기록과 식사 조건은 별도입니다. 식사 추천을 받으려면 위의 나의 식사 조건에서 알레르기·사용 도구 등을 확인하고 저장하세요.')
     url,code=operator_connection()
     if not code:st.info('운영자 AI 연결 설정이 필요합니다.')
     consent_key=hashlib.sha256((signature+url+code).encode()).hexdigest()

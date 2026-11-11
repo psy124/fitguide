@@ -93,3 +93,32 @@ def test_demo_meals_upgrades_existing_without_reset(tmp_path):
     with demo.connection() as db:
         assert db.execute('SELECT COUNT(*) FROM food_intake').fetchone()[0]==29
         assert db.execute("SELECT COUNT(*) FROM food_intake WHERE name='내 기록'").fetchone()[0]==1
+
+
+def test_demo_food_conditions_reset_and_migration(tmp_path):
+    from fitguide.meals import DEFAULT_FOOD
+    from fitguide.coach import context
+    path=tmp_path/'real.db';real=Store(path);original=path.read_bytes()
+    demo=seed_demo(path)
+    assert demo.profile()['food']==DEFAULT_FOOD
+    p=demo.profile();p.pop('food');demo.save_profile(p)
+    meals_before=context(demo,date.today(),30,'보통',False)['meal_count']
+    demo=seed_demo(path)
+    payload=context(demo,date.today(),30,'보통',False)
+    assert payload['food'] and payload['ingredients'] and payload['meal_count']==meals_before==4
+    p=demo.profile();p['food']['allergens']=['대두'];demo.save_profile(p)
+    assert seed_demo(path).profile()['food']['allergens']==['대두']
+    assert seed_demo(path,reset=True).profile()['food']==DEFAULT_FOOD
+    assert path.read_bytes()==original
+
+
+def test_reset_demo_ai_screen_has_food_conditions(tmp_path,monkeypatch):
+    monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'real.db'))
+    at=AppTest.from_file(APP).run()
+    at.toggle(key='demo_mode').set_value(True).run()
+    at.checkbox(key='confirm_demo_reset').check().run()
+    at.button(key='reset_demo').click().run()
+    switch_tab(at,'AI 추천')
+    assert not at.exception
+    assert not any('식사 조건을 저장' in x.value or '식사 기록과 식사 조건은 별도' in x.value for x in at.info)
+    assert any('오늘 식사 4건' in x.value for x in at.markdown)

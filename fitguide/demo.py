@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import streamlit as st
 from .storage import Store, EQUIPMENT
+from .meals import DEFAULT_FOOD
 
 
 def demo_path(real_path):
@@ -42,7 +43,8 @@ def seed_demo(real_path, *, reset=False, today=None):
     store = Store(demo_path(real_path))
     start = today - timedelta(days=55)
     profile = dict(goal='근육 증가', focus=[], level='초보', days=3, minutes=60,
-                   equipment=EQUIPMENT, height_cm=175.0, target_weight=72.0)
+                   equipment=EQUIPMENT, height_cm=175.0, target_weight=72.0,
+                   food=json.loads(json.dumps(DEFAULT_FOOD)))
     exercises = [('벤치프레스', 30), ('랫풀다운', 25), ('덤벨 숄더프레스', 8),
                  ('스쿼트', 40), ('덤벨 컬', 6), ('크런치', 0)]
     rows, weights = [], []
@@ -63,6 +65,12 @@ def seed_demo(real_path, *, reset=False, today=None):
         db.execute('CREATE TABLE IF NOT EXISTS demo_info (id INTEGER PRIMARY KEY, generated_on TEXT NOT NULL)')
         if db.execute('SELECT 1 FROM demo_info WHERE id=1').fetchone() and not reset:
             add_demo_meals(db,today)
+            row=db.execute('SELECT payload FROM profile WHERE id=1').fetchone()
+            if row:
+                saved=json.loads(row[0])
+                if not saved.get('food'):
+                    saved['food']=profile['food']
+                    db.execute('UPDATE profile SET payload=? WHERE id=1',(json.dumps(saved,ensure_ascii=False),))
             return store
         for table in ('profile', 'workout_sets', 'body_weights', 'workout_draft', 'routines', 'food_catalog', 'food_intake', 'ai_recommendations', 'ai_candidate_actions', 'meal_plans', 'demo_info'):
             db.execute(f'DELETE FROM {table}')
@@ -95,6 +103,7 @@ def select_store(real_path):
     with st.expander('가상 데이터 안내 · 초기화'):
         st.write('최근 8주 범위의 운동 21일·378세트·6종목, 체중 16회, 키·목표 체중과 예시 루틴을 제공합니다. 식사 예시는 생성일 기준 7일·28건·6종입니다.')
         st.caption('중량 증가, 체중의 작은 등락, 운동을 쉬는 구간을 확인하는 시연용 데이터입니다. 실제 사용자 결과나 운동 효과의 근거가 아닙니다.')
+        st.caption('시연용 식사 조건: 알레르기·제외 재료 없음, 식단 제한 없음, 조리 시간 30분, 전자레인지·가열 조리기구. AI 추천의 나의 식사 조건에서 변경할 수 있습니다.')
         st.caption('분석 기간을 전체 또는 최근 12주로 바꾸면 생성된 전체 기록을 볼 수 있습니다. 오래된 데모는 초기화하면 오늘 기준으로 다시 생성됩니다.')
         confirm = st.checkbox('데모에서 변경한 내용과 진행 중 운동을 지우고 다시 생성합니다.', key='confirm_demo_reset')
         def reset_demo():
