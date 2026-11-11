@@ -1,7 +1,8 @@
 from datetime import date
 import streamlit as st
 from .nutrition import NUTRIENTS, MEALTIMES, save_food, foods, save_intake, intakes, totals, delete_intake
-from .ai_history import plans, set_plan_status
+from .ai_history import plans, update_plan, delete_plan
+from .meals import INGREDIENTS, TOOLS
 
 
 def render_nutrition(store):
@@ -14,9 +15,27 @@ def render_nutrition(store):
         for plan in items:
             st.write(f"{plan['planned_day']} · {plan['mealtime']} · {plan['item']['name']} · {statuses[plan['status']]}")
             st.caption(', '.join(plan['item']['ingredients']))
-            status=st.selectbox('계획 상태',list(statuses),index=list(statuses).index(plan['status']),format_func=lambda x:statuses[x],key='plan_status_'+plan['id'])
-            if st.button('상태 저장',key='plan_save_'+plan['id']):
-                set_plan_status(store,plan['id'],status);st.rerun()
+            if plan['item'].get('user_edited'):st.caption('사용자가 수정한 식사 계획 · AI 추천 원본은 유지됩니다.')
+        if items:
+            selected=st.selectbox('수정·삭제할 식사 후보',[p['id'] for p in items],
+                format_func=lambda pid:next(f"{p['planned_day']} · {p['mealtime']} · {p['item']['name']}" for p in items if p['id']==pid),key='plan_selected')
+            plan=next(p for p in items if p['id']==selected);item=plan['item']
+            with st.form('plan_edit_'+selected):
+                name=st.text_input('식사 후보 이름',item['name'],max_chars=80)
+                planned_day=st.date_input('예정일',date.fromisoformat(plan['planned_day']))
+                meal=st.selectbox('예정 끼니',MEALTIMES,index=MEALTIMES.index(plan['mealtime']))
+                ingredients=st.multiselect('재료',list(INGREDIENTS),default=item['ingredients'])
+                minutes=st.number_input('조리 시간 (분)',1,180,int(item['minutes']))
+                tools=st.multiselect('조리 도구',TOOLS,default=item['tools'])
+                status=st.selectbox('계획 상태',list(statuses),index=list(statuses).index(plan['status']),format_func=lambda x:statuses[x])
+                if st.form_submit_button('식사 후보 수정 저장'):
+                    try:
+                        update_plan(store,selected,planned_day,meal,status,name,ingredients,minutes,tools)
+                        st.rerun()
+                    except ValueError as exc:st.error(str(exc))
+            confirm=st.checkbox('선택한 식사 후보를 삭제합니다.',key='plan_delete_confirm_'+selected)
+            if st.button('식사 후보 삭제',disabled=not confirm,key='plan_delete_'+selected):
+                delete_plan(store,selected);st.rerun()
     day=st.date_input('식사 날짜',date.today(),max_value=date.today(),key='intake_day')
     st.caption('영양 정보는 포장지 등 출처를 확인해 100g 기준으로 등록하세요. 하루 섭취량 전체가 아니라 입력한 음식만 합산합니다.')
     with st.expander('음식 등록·영양 정보 수정'):

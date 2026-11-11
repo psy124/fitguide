@@ -1,3 +1,3 @@
 @echo off
 cd /d "%~dp0"
-start "" "releases\clean-ai\FitGuide\FitGuide.exe"
+start "" "releases\meal-plan-edit\FitGuide\FitGuide.exe"

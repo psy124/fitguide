@@ -9,7 +9,7 @@ from fitguide.storage import Store
 from fitguide.meals import DEFAULT_FOOD
 from fitguide.coach import context
 from fitguide.ai_contract import validate_result
-from fitguide.ai_history import save_result,history,add_candidate,plans,actions,delete_result,set_plan_status
+from fitguide.ai_history import save_result,history,add_candidate,plans,actions,delete_result,set_plan_status,update_plan,delete_plan
 from fitguide.ai_provider import explain
 from server.gateway import Gateway,GatewayError
 from test_app import APP,switch_tab
@@ -44,6 +44,46 @@ def test_old_candidates_recheck_current_conditions(tmp_path):
     with pytest.raises(ValueError):add_candidate(s,rid,'exercises',0)
     with pytest.raises(ValueError):add_candidate(s,rid,'meals',0,date.today(),'점심')
     assert not actions(s,rid) and not plans(s) and not s.draft()
+
+
+def test_edit_delete_plan_preserves_source_and_allows_readd(tmp_path):
+    from fitguide.nutrition import intakes
+    s=Store(tmp_path/'db');p,response=fixture(s);rid=save_result(s,p,response)
+    pid=add_candidate(s,rid,'meals',0,date.today(),'점심')
+    update_plan(s,pid,'2026-12-01','저녁','done','수정한 식사',['두부'],15,['전자레인지'])
+    plan=plans(Store(s.path))[0]
+    assert (plan['planned_day'],plan['mealtime'],plan['status'])==('2026-12-01','저녁','done')
+    assert plan['item']['name']=='수정한 식사' and plan['item']['ingredients']==['두부']
+    assert history(s)[0]['result']==response['recommendation']
+    assert not intakes(s,date.today())
+    delete_plan(s,pid)
+    assert not plans(s) and not actions(s,rid) and history(s)
+    new=add_candidate(s,rid,'meals',0,date.today(),'점심')
+    assert new!=pid and plans(s)[0]['item']['name']=='AI 두부 밥'
+
+
+def test_invalid_plan_edit_is_atomic(tmp_path):
+    s=Store(tmp_path/'db');p,response=fixture(s);rid=save_result(s,p,response)
+    pid=add_candidate(s,rid,'meals',0,date.today(),'점심');before=plans(s)
+    for name,ingredients in [('', ['두부']),('식사',[]),('식사',['허구 재료'])]:
+        with pytest.raises(ValueError):update_plan(s,pid,date.today(),'점심','pending',name,ingredients,10,[])
+        assert plans(s)==before
+    profile=s.profile();profile['food']['allergens']=['대두'];s.save_profile(profile)
+    with pytest.raises(ValueError):update_plan(s,pid,date.today(),'점심','pending','식사',['두부'],10,[])
+    assert plans(s)==before
+
+
+def test_ui_edit_delete_meal_plan(tmp_path,monkeypatch):
+    path=tmp_path/'db';monkeypatch.setenv('FITGUIDE_DB',str(path));s=Store(path)
+    p,response=fixture(s);rid=save_result(s,p,response);pid=add_candidate(s,rid,'meals',0,date.today(),'점심')
+    at=AppTest.from_file(APP).run();switch_tab(at,'식사 기록')
+    next(x for x in at.text_input if x.label=='식사 후보 이름').set_value('수정한 두부 밥')
+    next(x for x in at.button if x.label=='식사 후보 수정 저장').click().run()
+    assert not at.exception and plans(s)[0]['item']['name']=='수정한 두부 밥'
+    assert next(x for x in at.button if x.label=='식사 후보 삭제').disabled
+    at.checkbox(key='plan_delete_confirm_'+pid).check().run()
+    next(x for x in at.button if x.label=='식사 후보 삭제').click().run()
+    assert not at.exception and not plans(s) and history(s)
 
 
 def test_reject_hallucinated_or_blocked_candidates(tmp_path):

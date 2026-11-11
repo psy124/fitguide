@@ -77,3 +77,39 @@ def plans(store):
 def set_plan_status(store,pid,status):
     if status not in ('pending','done','cancelled'):raise ValueError('상태를 확인하세요.')
     with store.connection() as db:db.execute('UPDATE meal_plans SET status=? WHERE id=?',(status,pid))
+
+
+def update_plan(store,pid,planned_day,mealtime,status,name,ingredients,minutes,tools):
+    """Edit a plan copy, preserving the original recommendation and intake."""
+    planned_day=date.fromisoformat(str(planned_day)).isoformat()
+    if mealtime not in MEALTIMES or status not in ('pending','done','cancelled'):
+        raise ValueError('끼니와 상태를 확인하세요.')
+    name=name.strip()
+    if not name or len(name)>80:raise ValueError('식사 이름은 1~80자로 입력하세요.')
+    if type(minutes) is not int or not 1<=minutes<=180:
+        raise ValueError('조리 시간은 1~180분으로 입력하세요.')
+    if not ingredients:raise ValueError('재료를 하나 이상 선택하세요.')
+    from .meals import INGREDIENTS,TOOLS
+    if not set(ingredients)<=set(INGREDIENTS) or not set(tools)<=set(TOOLS):
+        raise ValueError('등록된 재료와 조리 도구를 선택하세요.')
+    with store.connection() as db:
+        db.execute('BEGIN IMMEDIATE')
+        row=db.execute('SELECT payload FROM meal_plans WHERE id=?',(pid,)).fetchone()
+        if not row:raise ValueError('식사 후보를 찾을 수 없습니다.')
+        item=json.loads(row[0])
+        recipe_changed=(set(ingredients)!=set(item['ingredients']) or minutes!=item['minutes'] or set(tools)!=set(item['tools']))
+        if recipe_changed:
+            food=store.profile().get('food')
+            if not food or not set(ingredients)<=set(allowed_ingredients(food)) or minutes>food['minutes'] or not set(tools)<=set(food['tools']):
+                raise ValueError('현재 알레르기·식사 조건에 맞는 재료, 시간, 도구를 선택하세요.')
+        item.update(name=name,ingredients=list(dict.fromkeys(ingredients)),minutes=minutes,tools=list(dict.fromkeys(tools)),user_edited=True)
+        db.execute('UPDATE meal_plans SET planned_day=?,mealtime=?,status=?,payload=? WHERE id=?',
+                   (planned_day,mealtime,status,json.dumps(item,ensure_ascii=False),pid))
+
+
+def delete_plan(store,pid):
+    """Release the matching add action so a deleted candidate can be re-added."""
+    with store.connection() as db:
+        db.execute('BEGIN IMMEDIATE')
+        db.execute("DELETE FROM ai_candidate_actions WHERE kind='meals' AND target_id=?",(pid,))
+        db.execute('DELETE FROM meal_plans WHERE id=?',(pid,))
