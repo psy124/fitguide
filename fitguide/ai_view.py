@@ -4,11 +4,11 @@ import json
 import sqlite3
 import streamlit as st
 from .coach import context
-from .gateway_client import gateway_call,operator_connection
 from .food_view import render_food_preferences
 from .storage import EXERCISES
 from .nutrition import MEALTIMES
 from .ai_history import history,save_result,actions,add_candidate,delete_result
+from .personal_ai import render_settings, request as personal_request
 
 
 def render_result(store,row,blocked=False):
@@ -48,6 +48,7 @@ def render_ai_recommendations(store):
         confirm=st.checkbox('이 추천 기록을 삭제합니다. 이미 추가한 운동·식사 계획은 유지됩니다.',key='delete_ai_'+chosen)
         if st.button('추천 기록 삭제',disabled=not confirm):delete_result(store,chosen);st.rerun()
         return
+    personal=render_settings()
     render_food_preferences(store)
     with st.expander('추천에서 제외할 운동'):
         p=store.profile()
@@ -62,14 +63,13 @@ def render_ai_recommendations(store):
     st.caption('최근 28일 운동 요약과 오늘 입력한 식사 기록을 바탕으로 AI가 추천합니다. 기록 누락을 영양 부족으로 판단하지 않습니다.')
     st.write(f"오늘 식사 {payload['meal_count']}건 · {payload['nutrition']['kcal']} kcal")
     if not payload['food']:st.info('식사 기록과 식사 조건은 별도입니다. 식사 추천을 받으려면 위의 나의 식사 조건에서 알레르기·사용 도구 등을 확인하고 저장하세요.')
-    url,code=operator_connection()
-    if not code:st.info('운영자 AI 연결 설정이 필요합니다.')
-    consent_key=hashlib.sha256((signature+url+code).encode()).hexdigest()
-    consent=st.checkbox('기록 요약·목표·컨디션·식사 조건을 서버와 Google Gemini로 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
-    if st.button('AI 추천 생성',disabled=not(code and consent) or 'ai_pending' in st.session_state):
+    if not personal:st.info('내 Gemini API 설정에 자신의 API 키와 모델 ID를 저장하세요.')
+    consent_key=hashlib.sha256((signature+(personal['model'] if personal else '')).encode()).hexdigest()
+    consent=st.checkbox('기록 요약·목표·컨디션·식사 조건을 Google Gemini로 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
+    if st.button('AI 추천 생성',disabled=not(personal and consent) or 'ai_pending' in st.session_state):
         try:
             with st.spinner('AI 추천 생성 중… 최대 약 90초 걸릴 수 있습니다.'):
-                response=gateway_call(url,code,payload)
+                response=personal_request(payload)
                 st.session_state['ai_pending']=(payload,response)
         except ValueError as exc:st.error(str(exc))
     if 'ai_pending' in st.session_state:

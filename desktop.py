@@ -126,19 +126,8 @@ def _run_desktop(smoke=False):
 
 
 def run_desktop(smoke=False):
-    from fitguide.auto_ai import start_if_configured
-    gateway=None
-    try:
-        if not smoke:
-            try:
-                gateway=start_if_configured()
-            except Exception:
-                import ctypes
-                ctypes.windll.user32.MessageBoxW(None,'AI 서버 자동 시작에 실패했습니다. 기본 기능은 사용할 수 있습니다. 운영자 자동 시작 설정과 기존 서버를 확인하세요.','FitGuide AI 연결',0x30)
-        _run_desktop(smoke)
-    finally:
-        if gateway is not None:
-            gateway.close()
+    # Personal Gemini requests execute in the app; legacy port 8765 is not started.
+    _run_desktop(smoke)
 
 
 def main():

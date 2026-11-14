@@ -36,7 +36,7 @@ def test_existing_server_is_not_owned(tmp_path,monkeypatch):
     assert calls[0][1]['timeout']==3
 
 
-def test_desktop_closes_only_owned_gateway(monkeypatch):
+def test_desktop_does_not_start_legacy_gateway(monkeypatch):
     import desktop
     closed=[]
     class Handle:
@@ -45,7 +45,7 @@ def test_desktop_closes_only_owned_gateway(monkeypatch):
     def fail(smoke):raise RuntimeError('window failure')
     monkeypatch.setattr(desktop,'_run_desktop',fail)
     with pytest.raises(RuntimeError):desktop.run_desktop()
-    assert closed==[True]
+    assert closed==[]
 
 
 def test_owned_gateway_serves_and_stops(tmp_path,monkeypatch):

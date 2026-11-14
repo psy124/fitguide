@@ -79,16 +79,17 @@ def test_gemini_model_validation():
         with pytest.raises(ValueError):explain('test-secret',model,{})
 
 
-def test_operator_connection_ui(tmp_path,monkeypatch):
+def test_personal_connection_ignores_legacy_server_settings(tmp_path,monkeypatch):
     monkeypatch.setenv('FITGUIDE_DB',str(tmp_path/'ui.db'))
     monkeypatch.setenv('FITGUIDE_AI_CONFIG',str(tmp_path/'missing.json'))
     monkeypatch.setenv('FITGUIDE_AI_CODE','operator-test-code')
     monkeypatch.setenv('FITGUIDE_AI_SERVER','http://127.0.0.1:8765')
     calls=[]
-    def fake_gateway(url,code,payload):
-        calls.append((url,code,payload))
-        return {'answer':'테스트 설명','remaining':9}
-    monkeypatch.setattr('fitguide.ai_view.gateway_call',fake_gateway)
+    def fake_request(payload):
+        calls.append(payload)
+        raise ValueError('테스트 연결 실패')
+    monkeypatch.setattr('fitguide.ai_view.render_settings',lambda:dict(model='gemini-test'))
+    monkeypatch.setattr('fitguide.ai_view.personal_request',fake_request)
     at=AppTest.from_file(APP).run();switch_tab(at,'AI 추천')
     at.session_state['gateway_url']='https://untrusted.example'
     at.session_state['gateway_code']='user-modified'
@@ -99,7 +100,8 @@ def test_operator_connection_ui(tmp_path,monkeypatch):
     next(c for c in at.checkbox if c.key and c.key.startswith('coach_consent_')).check().run()
     next(b for b in at.button if b.label=='AI 추천 생성').click().run()
     assert not at.exception
-    assert calls[0][:2]==('http://127.0.0.1:8765','operator-test-code')
+    assert len(calls)==1 and calls[0]['schema_version']==2
+    assert any('테스트 연결 실패' in e.value for e in at.error)
 
 
 

@@ -118,10 +118,10 @@ def test_v2_transport_and_cache(tmp_path,monkeypatch):
 
 def test_ui_generate_add_and_reopen_history(tmp_path,monkeypatch):
     path=tmp_path/'db';monkeypatch.setenv('FITGUIDE_DB',str(path));s=Store(path);_,response=fixture(s)
-    monkeypatch.setenv('FITGUIDE_AI_CODE','test-code')
+    monkeypatch.setattr('fitguide.ai_view.render_settings',lambda:dict(model='gemini-test'))
     calls=[]
-    def fake(url,code,payload):calls.append(payload);return dict(response,remaining=9)
-    monkeypatch.setattr('fitguide.ai_view.gateway_call',fake)
+    def fake(payload):calls.append(payload);return dict(response,remaining=9)
+    monkeypatch.setattr('fitguide.ai_view.personal_request',fake)
     at=AppTest.from_file(APP).run();switch_tab(at,'AI 추천')
     assert not any(b.label in ('운동 후보 추가','식사 후보 추가') for b in at.button)
     next(c for c in at.checkbox if c.key and c.key.startswith('coach_consent_')).check().run()

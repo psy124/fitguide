@@ -5,21 +5,16 @@
 저장소: https://github.com/psy124/fitguide
 
 
-## 각자의 PC에서 자신의 API 키로 AI 사용하기
+## 각자의 API 키로 바로 사용하기
 
-**[배포본 기준 개인 Gemini API 키 설정 안내](docs/PERSONAL_API_SETUP.md)**
+**[Windows 배포 ZIP 다운로드](https://github.com/psy124/fitguide/releases/tag/v2026.11.14-personal-api)** · **[설정 상세 안내](docs/PERSONAL_API_SETUP.md)**
 
-각자 PC에서 자신의 Gemini API 키로 로컬 AI 서버를 실행하고 배포본을 연결합니다.
-현재 배포 ZIP에는 API 키 입력 화면이 없으므로 **소스 ZIP과 Python을 추가로 준비**해야 합니다.
+1. 배포 ZIP 전체를 압축 해제하고 FitGuide.exe를 실행합니다.
+2. AI 추천 → 내 Gemini API 설정에서 본인의 키와 모델 ID를 입력합니다.
+3. 하루 요청 한도를 정하고 저장한 뒤 전송에 동의하여 추천을 생성합니다.
 
-1. 배포 ZIP과 GitHub 소스를 각각 압축 해제합니다.
-2. 소스 폴더에서 서버 환경과 로컬 접속 코드를 준비합니다.
-3. 앱 연결 주소를 `http://127.0.0.1:8765`로 설정합니다.
-4. `start-ai-server.cmd`에서 자신의 Gemini API 키를 입력합니다.
-5. 배포본 `FitGuide.exe`를 실행하고 AI 추천을 생성합니다.
-
-자세한 명령, 연결 확인, 오류 해결, 키 암호화 저장과 자동 실행 방법은 위 안내에 있습니다.
-다른 사람의 서버나 HTTPS 터널은 필요하지 않습니다. 사용량과 비용은 각자의 API 프로젝트에 적용됩니다.
+별도 Python·소스 설치나 AI 서버 실행은 필요 없습니다. API 키는 Windows 계정으로 암호화하여 저장합니다.
+모델·한도 변경과 저장된 설정 삭제를 앱에서 지원합니다. Google API 비용과 사용량은 본인의 프로젝트에 적용됩니다.
 
 ## 현재 기능 (2026-11-08)
 
@@ -38,24 +33,17 @@ AI 없이도 기록·분석·저장된 추천 조회는 가능하지만 새로�
 
 ## 실행
 
-개발 PC에서는 `start-fitguide-desktop.cmd`, 배포본에서는 압축 해제한 `FitGuide.exe`를 실행합니다.
-실행 파일: `releases/clean-ai/FitGuide/FitGuide.exe`.
-배포 ZIP: `releases/FitGuide-Demo-20261108.zip`.
-ZIP 전체를 압축 해제하고 FitGuide 폴더의 FitGuide.exe를 실행합니다. EXE만 옮기면 안 됩니다.
-Windows x64와 WebView2 Runtime이 필요합니다. 앱 자체 실행에는 별도 Python이 필요 없지만, 현재 개인 API 서버 설정에는 소스와 Python이 추가로 필요합니다.
-
-개인 API 설정은 [개인 Gemini API 키 사용 안내](docs/PERSONAL_API_SETUP.md)를 따르세요.
-수동 실행은 서버 창을 유지하며, 선택적으로 `setup-auto-ai.cmd`로 자신의 키를 저장해 앱과 함께 자동 실행할 수 있습니다.
-자동 실행 설정은 소스의 server/private 설정을 참조하므로 설정 후 소스 폴더를 이동·삭제하지 마세요.
-배포 ZIP에는 API 키·접속 코드·개인 DB를 포함하지 않습니다.
-
-기록은 `%LOCALAPPDATA%/FitGuide`에 저장됩니다. 웹 개발 버전 DB와 자동 동기화되지 않습니다.
+배포본은 ZIP 전체를 해제하고 FitGuide.exe를 실행합니다. _internal 폴더가 필수입니다.
+개발 PC에서는 start-fitguide-desktop.cmd를 실행합니다.
+Windows x64 및 WebView2 Runtime이 필요하며 실행에 별도 Python 설치는 필요 없습니다.
+기록은 %LOCALAPPDATA%/FitGuide에 저장됩니다. 이전 앱을 종료하고 새 버전을 실행하면 같은 계정의 기록을 유지합니다.
+API 키 설정은 [개인 API 안내](docs/PERSONAL_API_SETUP.md)를 참고하세요.
 
 ## 기술 구성
 
 Python / Streamlit / SQLite / pandas / pywebview / PyInstaller.
-Google Gemini REST API, 로컬 AI 게이트웨이의 인증·일일 제한, JSON 출력과 서버/클라이언트 조건 검증.
-모델은 각자 API 프로젝트에서 사용 가능한 ID를 로컬 설정에서 선택합니다.
+Google Gemini REST API, 앱 내부 일일 요청 제한, JSON 출력과 서버/클라이언트 조건 검증.
+모델은 각자 API 프로젝트에서 사용 가능한 ID를 앱의 내 Gemini API 설정에서 지정합니다.
 
 ## 개발 환경
 
