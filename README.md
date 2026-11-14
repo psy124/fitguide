@@ -5,23 +5,21 @@
 저장소: https://github.com/psy124/fitguide
 
 
-## 다른 PC에서 AI 사용하기
+## 각자의 PC에서 자신의 API 키로 AI 사용하기
 
-**배포 ZIP만 복사하면 AI가 자동 연결되지는 않습니다.** 일반 사용자 PC에는 Gemini API 키가 필요 없지만, 운영자가 제공하는 **HTTPS 서버 주소와 사용자별 접속 코드**를 한 번 설정해야 합니다.
+**[배포본 기준 개인 Gemini API 키 설정 안내](docs/PERSONAL_API_SETUP.md)**
 
-**[다른 PC의 AI 연결 방법 — 단계별 상세 안내](docs/REMOTE_AI_SETUP.md)**
+각자 PC에서 자신의 Gemini API 키로 로컬 AI 서버를 실행하고 배포본을 연결합니다.
+현재 배포 ZIP에는 API 키 입력 화면이 없으므로 **소스 ZIP과 Python을 추가로 준비**해야 합니다.
 
-| 담당 | 진행 순서 |
-|---|---|
-| 운영자 PC | 사용자 코드 발급 → Gemini AI 서버 실행 → HTTPS 터널 실행 → 주소와 코드를 사용자에게 전달 |
-| 다른 PC | 배포 ZIP 전체 압축 해제 → 연결 설정 파일 저장 → 연결·인증 확인 → 앱에서 전송 동의 후 추천 생성 |
+1. 배포 ZIP과 GitHub 소스를 각각 압축 해제합니다.
+2. 소스 폴더에서 서버 환경과 로컬 접속 코드를 준비합니다.
+3. 앱 연결 주소를 `http://127.0.0.1:8765`로 설정합니다.
+4. `start-ai-server.cmd`에서 자신의 Gemini API 키를 입력합니다.
+5. 배포본 `FitGuide.exe`를 실행하고 AI 추천을 생성합니다.
 
-- 연결 설정 위치: `%LOCALAPPDATA%\FitGuide\ai-client.json`
-- 다른 PC에서 `127.0.0.1`은 운영자 PC가 아니라 **그 PC 자신**입니다. 외부 연결에는 HTTPS 주소를 사용하세요.
-- 운영자 PC·AI 서버·터널이 켜져 있어야 새 추천을 받을 수 있습니다.
-- 기록은 각 PC에 따로 저장됩니다. API 키나 개인 DB를 공개 저장소에 올리지 마세요.
-- 상세 안내에는 서버 준비, 임시 HTTPS 주소 생성, 설정 명령, 인증 확인, 오류별 해결 방법이 포함되어 있습니다.
-- 문서의 원격 연결 절차는 실제 배포 환경에서 별도로 검증해야 합니다.
+자세한 명령, 연결 확인, 오류 해결, 키 암호화 저장과 자동 실행 방법은 위 안내에 있습니다.
+다른 사람의 서버나 HTTPS 터널은 필요하지 않습니다. 사용량과 비용은 각자의 API 프로젝트에 적용됩니다.
 
 ## 현재 기능 (2026-11-08)
 
@@ -40,25 +38,24 @@ AI 없이도 기록·분석·저장된 추천 조회는 가능하지만 새로�
 
 ## 실행
 
-운영자 PC: `start-fitguide-desktop.cmd` 실행.
+개발 PC에서는 `start-fitguide-desktop.cmd`, 배포본에서는 압축 해제한 `FitGuide.exe`를 실행합니다.
 실행 파일: `releases/clean-ai/FitGuide/FitGuide.exe`.
 배포 ZIP: `releases/FitGuide-Demo-20261108.zip`.
 ZIP 전체를 압축 해제하고 FitGuide 폴더의 FitGuide.exe를 실행합니다. EXE만 옮기면 안 됩니다.
-Windows x64와 WebView2 Runtime이 필요하며 Python은 실행 시 필요하지 않습니다.
+Windows x64와 WebView2 Runtime이 필요합니다. 앱 자체 실행에는 별도 Python이 필요 없지만, 현재 개인 API 서버 설정에는 소스와 Python이 추가로 필요합니다.
 
-AI 자동 실행은 운영자 PC에서 `setup-auto-ai.cmd`로 키를 한 번 등록한 경우에만 동작합니다.
-키는 Windows 현재 계정 DPAPI로 암호화해 저장합니다. 해당 계정 권한의 프로그램까지 차단하는 보호는 아닙니다.
-사용자에게 배포하는 ZIP에는 키·시연 코드·DB가 포함되지 않습니다.
-다른 PC의 AI 연결은 별도 운영자 설정과 HTTPS 서버 구성이 필요합니다. 현재 PC의 localhost 주소는 다른 PC에서 사용할 수 없습니다.
-자동 실행 설정은 원본 프로젝트의 server/private 설정·사용량 DB를 참조하므로 해당 폴더를 이동/삭제하지 마세요.
+개인 API 설정은 [개인 Gemini API 키 사용 안내](docs/PERSONAL_API_SETUP.md)를 따르세요.
+수동 실행은 서버 창을 유지하며, 선택적으로 `setup-auto-ai.cmd`로 자신의 키를 저장해 앱과 함께 자동 실행할 수 있습니다.
+자동 실행 설정은 소스의 server/private 설정을 참조하므로 설정 후 소스 폴더를 이동·삭제하지 마세요.
+배포 ZIP에는 API 키·접속 코드·개인 DB를 포함하지 않습니다.
 
 기록은 `%LOCALAPPDATA%/FitGuide`에 저장됩니다. 웹 개발 버전 DB와 자동 동기화되지 않습니다.
 
 ## 기술 구성
 
 Python / Streamlit / SQLite / pandas / pywebview / PyInstaller.
-Google Gemini REST API, 운영자 게이트웨이의 인증·일일 제한, JSON 출력과 서버/클라이언트 조건 검증.
-모델은 운영자 비공개 설정에서 선택합니다. 현재 PC 설정은 gemini-3.1-flash-lite입니다.
+Google Gemini REST API, 로컬 AI 게이트웨이의 인증·일일 제한, JSON 출력과 서버/클라이언트 조건 검증.
+모델은 각자 API 프로젝트에서 사용 가능한 ID를 로컬 설정에서 선택합니다.
 
 ## 개발 환경
 
