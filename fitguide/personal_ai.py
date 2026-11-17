@@ -6,10 +6,11 @@ from pathlib import Path
 import tempfile
 import threading
 from .auto_ai import protect
-from .ai_provider import explain, select_model
+from .ai_provider import explain
 
 _lock = threading.Lock()
 DAILY_LIMIT = 10
+MODEL_ID = 'gemini-3.1-flash-lite'
 
 
 def root():
@@ -22,8 +23,8 @@ def load_settings():
     try:
         value=json.loads(protect(path.read_bytes(),decrypt=True))
         # Older versions saved a user-entered model and limit. Retain the key;
-        # the key-only UI uses automatic models and the app's default limit.
-        value['model']='auto'
+        # the key-only UI uses the fixed model and the app's default limit.
+        value['model']=MODEL_ID
         value['daily_limit']=DAILY_LIMIT
         validate(value['key'],value['model'],value['daily_limit'])
         return value
@@ -34,13 +35,13 @@ def load_settings():
 def validate(key,model,limit):
     if not isinstance(key,str) or not key.strip() or len(key)>500 or any(c.isspace() for c in key.strip()):
         raise ValueError('Gemini API 키를 확인하세요.')
-    if model != 'auto':
-        raise ValueError('모델 자동 선택 설정을 확인하세요.')
+    if model != MODEL_ID:
+        raise ValueError('Gemini 모델 설정을 확인하세요.')
     if type(limit) is not int or not 1<=limit<=1000:raise ValueError('일일 요청 한도는 1~1000회로 설정하세요.')
 
 
 def save_settings(key):
-    model='auto';limit=DAILY_LIMIT
+    model=MODEL_ID;limit=DAILY_LIMIT
     if not key.strip():
         old=load_settings()
         key=old['key'] if old else ''
@@ -68,7 +69,7 @@ def request(payload):
         # Keep quotas across key/model changes; namespace cached responses by configuration.
         identity=hashlib.sha256((settings['model']+'\0'+settings['key']).encode()).hexdigest()
         gateway=Gateway(root()/'personal-ai-usage.sqlite3',{'personal':hashlib.sha256(identity.encode()).hexdigest()},
-                        lambda p:explain(settings['key'],select_model(settings['key']),p),settings['daily_limit'],settings['daily_limit'])
+                        lambda p:explain(settings['key'],settings['model'],p),settings['daily_limit'],settings['daily_limit'])
         data=dict(payload,request_id=hashlib.sha256((identity+payload['request_id']).encode()).hexdigest()[:32])
         return gateway.request('Bearer '+identity,data)
     except GatewayError as exc:
@@ -89,7 +90,7 @@ def render_settings():
         st.caption('키는 현재 Windows 계정으로 암호화하여 저장합니다. 같은 계정 권한의 프로그램까지 차단하지는 않습니다.')
         with st.form('personal_ai_settings'):
             key=st.text_input('Gemini API 키',type='password',key='personal_api_key',help='저장된 키는 표시하지 않습니다. 기존 키를 유지하려면 비워 두세요.')
-            st.caption('API 키만 입력하세요. 추천 생성 시 사용할 모델을 자동으로 선택합니다. 하루 최대 10회 요청할 수 있습니다.')
+            st.caption('API 키만 입력하세요. Gemini 3.1 Flash-Lite 모델을 사용합니다. 하루 최대 10회 요청할 수 있습니다.')
             st.caption('Google API 사용량·요금은 본인 프로젝트에 적용됩니다. 한국 시간 자정 기준이며 실패한 AI 호출도 차감될 수 있습니다.')
             if st.form_submit_button('API 설정 저장'):
                 try:

@@ -16,7 +16,7 @@ def isolated(tmp_path,monkeypatch):
 def test_encrypted_settings_lifecycle(isolated):
     assert ai.load_settings() is None
     ai.save_settings('test-secret-key')
-    assert ai.load_settings()['model']=='auto'
+    assert ai.load_settings()['model']=='gemini-3.1-flash-lite'
     assert b'test-secret-key' not in (ai.root()/'personal-ai.dpapi').read_bytes()
     ai.save_settings('')
     assert ai.load_settings()['key']=='test-secret-key'
@@ -28,8 +28,6 @@ def test_encrypted_settings_lifecycle(isolated):
 def test_personal_request_cache_quota_and_failure(isolated,monkeypatch):
     s=Store(isolated/'records.db');p,response=fixture(s)
     monkeypatch.setattr(ai,'DAILY_LIMIT',1)
-    selected=[]
-    monkeypatch.setattr(ai,'select_model',lambda key: selected.append(key) or 'gemini-test')
     ai.save_settings('dummy')
     calls=[]
     def provider(key,model,payload):
@@ -37,7 +35,7 @@ def test_personal_request_cache_quota_and_failure(isolated,monkeypatch):
     monkeypatch.setattr(ai,'explain',provider)
     assert ai.request(p)['remaining']==0
     assert ai.request(p)['remaining']==0 and len(calls)==1
-    assert selected==['dummy'] and calls==[('dummy','gemini-test')]
+    assert calls==[('dummy','gemini-3.1-flash-lite')]
     ai.save_settings('new-key')
     with pytest.raises(ValueError,match='한도'):ai.request(p)
     monkeypatch.setattr(ai,'DAILY_LIMIT',2)
@@ -59,7 +57,7 @@ def test_settings_ui_save_replace_delete_and_reopen(isolated):
     assert not at.exception and ai.load_settings()['key']=='ui-secret'
     assert at.text_input(key='personal_api_key').value==''
     fresh=AppTest.from_file(APP).run();switch_tab(fresh,'AI 추천')
-    assert not fresh.exception and ai.load_settings()['model']=='auto'
+    assert not fresh.exception and ai.load_settings()['model']=='gemini-3.1-flash-lite'
     assert not any(w.key=='personal_model' for w in fresh.text_input)
     assert fresh.text_input(key='personal_api_key').value==''
     fresh.checkbox(key='personal_delete_confirm').check().run()
@@ -74,9 +72,10 @@ def test_corrupt_settings_recovery(isolated):
     assert ai.load_settings()['key']=='new-key'
 
 
-def test_old_settings_migrate_without_reentering_key(isolated):
+@pytest.mark.parametrize('old_model', ['auto', 'gemini-retired'])
+def test_old_settings_migrate_without_reentering_key(isolated, old_model):
     import json
     ai.root().mkdir(parents=True)
-    value=dict(key='existing-key',model='gemini-retired',daily_limit=100)
+    value=dict(key='existing-key',model=old_model,daily_limit=100)
     (ai.root()/'personal-ai.dpapi').write_bytes(ai.protect(json.dumps(value).encode()))
-    assert ai.load_settings()==dict(key='existing-key',model='auto',daily_limit=10)
+    assert ai.load_settings()==dict(key='existing-key',model='gemini-3.1-flash-lite',daily_limit=10)

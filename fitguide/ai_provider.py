@@ -4,8 +4,6 @@ import re
 import urllib.request
 import urllib.error
 import socket
-import time
-import urllib.parse
 
 class ProviderError(ValueError):
     """Only fixed diagnostic codes; never retain provider bodies or secrets."""
@@ -30,60 +28,6 @@ def http_diagnostic(exc):
     except (ValueError,TypeError,AttributeError,OSError):
         pass
     return fallback
-
-
-def select_model(key):
-    """Discover text-generation models using the user's key, never a URL key."""
-    models = set()
-    token = ''
-    seen = set()
-    deadline = time.monotonic() + 20
-    try:
-        while True:
-            query = urllib.parse.urlencode(dict(pageSize=1000, **({'pageToken': token} if token else {})))
-            request = urllib.request.Request(
-                'https://generativelanguage.googleapis.com/v1beta/models?' + query,
-                headers={'x-goog-api-key': key.strip()})
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise ProviderError('TIMEOUT')
-            with urllib.request.urlopen(request, timeout=min(10, remaining)) as response:
-                result = json.load(response)
-            for item in result.get('models', []):
-                if not isinstance(item, dict):
-                    continue
-                name = item.get('name', '').removeprefix('models/')
-                if ('generateContent' in item.get('supportedGenerationMethods', [])
-                        and re.fullmatch(r'gemini-[A-Za-z0-9._-]{1,100}', name)
-                        and not any(word in name.lower() for word in
-                                    ('image', 'vision', 'tts', 'audio', 'live', 'embedding',
-                                     'robotics', 'computer-use', 'deep-research', 'transcribe', 'video', 'omni'))):
-                    models.add(name)
-            token = result.get('nextPageToken', '')
-            if not token:
-                break
-            if not isinstance(token, str) or token in seen:
-                raise ProviderError('INVALID_RESPONSE_FORMAT')
-            seen.add(token)
-        if not models:
-            raise ProviderError('MODEL_NOT_FOUND')
-        def priority(name):
-            version = re.search(r'gemini-(\d+)(?:\.(\d+))?', name)
-            major, minor = (int(version[1]), int(version[2] or 0)) if version else (0, 0)
-            unstable = any(word in name for word in ('preview', 'exp', 'experimental'))
-            family = 0 if 'flash' in name and 'lite' not in name else 1 if 'flash' in name else 2
-            return unstable, family, -major, -minor, name
-        return min(models, key=priority)
-    except ProviderError:
-        raise
-    except urllib.error.HTTPError as exc:
-        raise ProviderError(http_diagnostic(exc)) from None
-    except (TimeoutError, socket.timeout):
-        raise ProviderError('TIMEOUT') from None
-    except urllib.error.URLError:
-        raise ProviderError('NETWORK') from None
-    except Exception:
-        raise ProviderError('INVALID_RESPONSE_FORMAT') from None
 
 
 def explain(key, model, payload):

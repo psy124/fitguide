@@ -46,6 +46,6 @@ https://developer.microsoft.com/microsoft-edge/webview2/
 
 ## 각자의 Gemini API 키로 AI 사용
 
-AI 추천 탭의 내 Gemini API 설정에서 API 키만 저장합니다. 모델은 추천 생성 시 자동 선택하며 로컬 요청 한도는 하루 10회입니다.
+AI 추천 탭의 내 Gemini API 설정에서 API 키만 저장합니다. 모델은 gemini-3.1-flash-lite로 고정하며 로컬 요청 한도는 하루 10회입니다.
 배포 앱이 직접 Gemini에 요청하므로 별도 AI 서버·소스·Python 설치가 필요 없습니다.
 [설정 및 업데이트 상세 안내](PERSONAL_API_SETUP.md)를 참고하세요.
