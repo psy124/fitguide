@@ -6,6 +6,7 @@ a = Analysis(['desktop.py'], pathex=[],
     hiddenimports=streamlit_hidden + collect_submodules('fitguide') + ['server.gateway','webview.platforms.edgechromium','webview.platforms.winforms'],
     excludes=['pytest','tkinter'], noarchive=False)
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='FitGuide', debug=False,
+# Extract bundled DLLs at runtime so Explorer's ZIP extraction does not attach
+# the downloaded archive's Internet zone to Python.Runtime.dll.
+exe = EXE(pyz, a.scripts, a.binaries, a.datas, name='FitGuide', debug=False,
           bootloader_ignore_signals=False, strip=False, upx=False, console=False)
-coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='FitGuide')

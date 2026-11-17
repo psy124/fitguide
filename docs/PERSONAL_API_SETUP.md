@@ -6,9 +6,9 @@ Python 설치, 소스 다운로드, 접속 코드 발급, 별도 AI 서버와 �
 
 ## 다운로드와 실행
 
-1. [배포 페이지](https://github.com/psy124/fitguide/releases/tag/v2026.11.14-personal-api)에서 FitGuide_Windows_PersonalAPI_2026-11-14.zip을 받습니다.
-2. ZIP 전체를 압축 해제합니다.
-3. FitGuide 폴더의 FitGuide.exe를 실행합니다. _internal 폴더를 함께 유지하세요.
+1. [최신 배포 페이지](https://github.com/psy124/fitguide/releases/latest)에서 FitGuide.exe 또는 ZIP을 받습니다.
+2. ZIP을 받았다면 압축 해제합니다.
+3. FitGuide.exe를 실행합니다. 2026-11-17 수정본부터 단일 EXE로 실행하며 별도 _internal 폴더가 필요 없습니다.
 4. Windows x64와 Microsoft Edge WebView2 Runtime이 필요합니다.
 
 ## 최초 설정
@@ -55,6 +55,7 @@ Python 설치, 소스 다운로드, 접속 코드 발급, 별도 AI 서버와 �
 
 | 표시/증상 | 확인할 내용 |
 |---|---|
+| Python.Runtime.Loader.Initialize 실행 오류 | 최신 단일 EXE 배포본으로 업데이트 |
 | API 설정을 저장하라는 안내 | 내 Gemini API 설정에 키와 모델 ID 입력 |
 | AI 추천 생성 버튼 비활성화 | 설정 저장과 전송 동의 확인 |
 | 저장한 설정을 읽을 수 없음 | 해당 Windows 계정에서 키를 다시 입력하고 저장 |
