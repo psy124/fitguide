@@ -63,7 +63,7 @@ def render_ai_recommendations(store):
     st.caption('최근 28일 운동 요약과 오늘 입력한 식사 기록을 바탕으로 AI가 추천합니다. 기록 누락을 영양 부족으로 판단하지 않습니다.')
     st.write(f"오늘 식사 {payload['meal_count']}건 · {payload['nutrition']['kcal']} kcal")
     if not payload['food']:st.info('식사 기록과 식사 조건은 별도입니다. 식사 추천을 받으려면 위의 나의 식사 조건에서 알레르기·사용 도구 등을 확인하고 저장하세요.')
-    if not personal:st.info('내 Gemini API 설정에 자신의 API 키와 모델 ID를 저장하세요.')
+    if not personal:st.info('내 Gemini API 설정에 자신의 API 키를 저장하세요. Gemini 3.1 Flash-Lite 모델을 사용합니다.')
     consent_key=hashlib.sha256((signature+(personal['model'] if personal else '')).encode()).hexdigest()
     consent=st.checkbox('기록 요약·목표·컨디션·식사 조건을 Google Gemini로 전송하는 데 동의합니다.',key='coach_consent_'+consent_key)
     if st.button('AI 추천 생성',disabled=not(personal and consent) or 'ai_pending' in st.session_state):

@@ -7,14 +7,14 @@
 
 ## 각자의 API 키로 바로 사용하기
 
-**[Windows 배포 ZIP 다운로드](https://github.com/psy124/fitguide/releases/tag/v2026.11.14-personal-api)** · **[설정 상세 안내](docs/PERSONAL_API_SETUP.md)**
+**[Windows 배포본 다운로드](https://github.com/psy124/fitguide/releases/latest)** · **[설정 상세 안내](docs/PERSONAL_API_SETUP.md)**
 
-1. 배포 ZIP 전체를 압축 해제하고 FitGuide.exe를 실행합니다.
-2. AI 추천 → 내 Gemini API 설정에서 본인의 키와 모델 ID를 입력합니다.
-3. 하루 요청 한도를 정하고 저장한 뒤 전송에 동의하여 추천을 생성합니다.
+1. 최신 배포본의 FitGuide.exe를 실행합니다. ZIP을 받았다면 먼저 압축 해제합니다.
+2. AI 추천 → 내 Gemini API 설정에서 본인의 API 키만 입력하고 저장합니다.
+3. 전송에 동의하여 추천을 생성합니다. Gemini 3.1 Flash-Lite 모델을 사용하며 로컬 요청 한도는 하루 10회입니다.
 
 별도 Python·소스 설치나 AI 서버 실행은 필요 없습니다. API 키는 Windows 계정으로 암호화하여 저장합니다.
-모델·한도 변경과 저장된 설정 삭제를 앱에서 지원합니다. Google API 비용과 사용량은 본인의 프로젝트에 적용됩니다.
+API 키 변경과 저장된 설정 삭제를 앱에서 지원합니다. Google API 비용과 사용량은 본인의 프로젝트에 적용됩니다.
 
 ## 현재 기능 (2026-11-08)
 
@@ -33,7 +33,8 @@ AI 없이도 기록·분석·저장된 추천 조회는 가능하지만 새로�
 
 ## 실행
 
-배포본은 ZIP 전체를 해제하고 FitGuide.exe를 실행합니다. _internal 폴더가 필수입니다.
+2026-11-17 수정본부터 단일 FitGuide.exe로 배포합니다. _internal 폴더를 따로 옮길 필요가 없습니다.
+기존 폴더 배포본에서 Python.Runtime.Loader.Initialize 오류가 나면 최신 단일 EXE로 업데이트하세요.
 개발 PC에서는 start-fitguide-desktop.cmd를 실행합니다.
 Windows x64 및 WebView2 Runtime이 필요하며 실행에 별도 Python 설치는 필요 없습니다.
 기록은 %LOCALAPPDATA%/FitGuide에 저장됩니다. 이전 앱을 종료하고 새 버전을 실행하면 같은 계정의 기록을 유지합니다.
@@ -43,7 +44,7 @@ API 키 설정은 [개인 API 안내](docs/PERSONAL_API_SETUP.md)를 참고하�
 
 Python / Streamlit / SQLite / pandas / pywebview / PyInstaller.
 Google Gemini REST API, 앱 내부 일일 요청 제한, JSON 출력과 서버/클라이언트 조건 검증.
-모델은 각자 API 프로젝트에서 사용 가능한 ID를 앱의 내 Gemini API 설정에서 지정합니다.
+모델은 gemini-3.1-flash-lite로 고정하며 API 키만 입력합니다.
 
 ## 개발 환경
 

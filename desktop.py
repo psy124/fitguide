@@ -105,6 +105,8 @@ def _run_desktop(smoke=False):
     root = data_root()
     legacy = (Path(sys.executable).parent if getattr(sys, 'frozen', False) else resource_root()) / 'data' / 'fitguide.db'
     db_path = initialize_data(root, legacy)
+    if smoke:
+        (root / 'desktop-smoke.txt').unlink(missing_ok=True)
     env = dict(os.environ, FITGUIDE_DB=str(db_path), PYTHONIOENCODING='utf-8')
     port = free_port()
     command = ([sys.executable] if getattr(sys, 'frozen', False) else [sys.executable, str(Path(__file__).resolve())])
@@ -115,7 +117,11 @@ def _run_desktop(smoke=False):
         try:
             wait_ready(process, port)
             if smoke:
-                (root / 'desktop-smoke.txt').write_text('server ready', encoding='utf-8')
+                # A healthy server alone does not prove the native window can load:
+                # downloaded onedir builds can fail here in Python.Runtime.dll.
+                from webview.guilib import initialize
+                initialize('edgechromium')
+                (root / 'desktop-smoke.txt').write_text('server and desktop runtime ready', encoding='utf-8')
                 return
             import webview
             webview.create_window('FitGuide', f'http://127.0.0.1:{port}', width=1280, height=900,
@@ -148,9 +154,13 @@ def main():
             (root / 'desktop-error.log').write_text(traceback.format_exc(), encoding='utf-8')
             if not args.smoke_test:
                 import ctypes
-                ctypes.windll.user32.MessageBoxW(None, f'{exc}\n\n로그 위치: {root}\nMicrosoft Edge WebView2 Runtime 설치 여부도 확인하세요.', 'FitGuide 실행 오류', 0x10)
-            raise
+                guidance = ('구버전 폴더 배포본의 .NET DLL을 불러오지 못했습니다. 최신 단일 EXE 배포본으로 업데이트하세요.'
+                            if 'Python.Runtime' in str(exc) else
+                            'desktop-error.log를 확인하세요. WebView2 관련 오류라면 Microsoft Edge WebView2 Runtime 설치 여부를 확인하세요.')
+                ctypes.windll.user32.MessageBoxW(None, f'{exc}\n\n로그 위치: {root}\n{guidance}', 'FitGuide 실행 오류', 0x10)
+            return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

@@ -16,7 +16,10 @@
 
 ## 배포
 
-`dist/FitGuide` 폴더 **전체**를 전달하세요. FitGuide.exe만 복사하면 실행되지 않습니다.
+2026-11-17 수정본부터 `dist/FitGuide.exe` 단일 파일을 전달합니다.
+기존 폴더 배포본은 다운로드한 ZIP을 Windows 탐색기로 해제할 때 .NET DLL에 인터넷 출처 표시가 상속되어 `Failed to resolve Python.Runtime.Loader.Initialize` 오류가 날 수 있었습니다.
+단일 EXE는 필요한 DLL을 실행 시 임시 폴더에 풀어 사용합니다. 최초 실행에 시간이 조금 걸릴 수 있습니다.
+Windows 보안 설정을 변경하거나 DLL 차단을 자동 해제하지 않습니다.
 앱 자체는 Python을 별도 설치하지 않아도 됩니다. 개인 API 키 설정도 앱 안에서 지원합니다. Windows x64 및 Microsoft Edge WebView2 Runtime이 필요합니다.
 WebView2가 없는 PC에서는 Microsoft 공식 설치 안내를 이용하세요:
 https://developer.microsoft.com/microsoft-edge/webview2/
@@ -31,7 +34,7 @@ https://developer.microsoft.com/microsoft-edge/webview2/
 ```
 
 `FITGUIDE_DESKTOP_DATA` 환경 변수로 데스크톱 데이터 폴더를 지정할 수 있습니다(테스트용).
-`FitGuide.exe --smoke-test`는 UI 없이 서버 시작 및 종료를 확인하고 데이터 폴더에 desktop-smoke.txt를 만듭니다.
+`FitGuide.exe --smoke-test`는 UI 없이 서버와 .NET/WebView2 런타임 로딩, 서버 종료를 확인하고 성공 시 데이터 폴더에 desktop-smoke.txt를 만듭니다. 실패 시 종료 코드는 1이며 이전 성공 표시는 제거합니다.
 실행 오류는 desktop-error.log, 서버 로그는 desktop-server.log에 기록됩니다.
 
 ## 구현 참고
@@ -43,6 +46,6 @@ https://developer.microsoft.com/microsoft-edge/webview2/
 
 ## 각자의 Gemini API 키로 AI 사용
 
-AI 추천 탭의 내 Gemini API 설정에서 키·모델·하루 한도를 저장합니다.
+AI 추천 탭의 내 Gemini API 설정에서 API 키만 저장합니다. 모델은 gemini-3.1-flash-lite로 고정하며 로컬 요청 한도는 하루 10회입니다.
 배포 앱이 직접 Gemini에 요청하므로 별도 AI 서버·소스·Python 설치가 필요 없습니다.
 [설정 및 업데이트 상세 안내](PERSONAL_API_SETUP.md)를 참고하세요.
