@@ -3,13 +3,13 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import re
 import tempfile
 import threading
 from .auto_ai import protect
-from .ai_provider import explain
+from .ai_provider import explain, select_model
 
 _lock = threading.Lock()
+DAILY_LIMIT = 10
 
 
 def root():
@@ -21,6 +21,10 @@ def load_settings():
     if not path.exists():return None
     try:
         value=json.loads(protect(path.read_bytes(),decrypt=True))
+        # Older versions saved a user-entered model and limit. Retain the key;
+        # the key-only UI uses automatic models and the app's default limit.
+        value['model']='auto'
+        value['daily_limit']=DAILY_LIMIT
         validate(value['key'],value['model'],value['daily_limit'])
         return value
     except Exception:
@@ -30,13 +34,13 @@ def load_settings():
 def validate(key,model,limit):
     if not isinstance(key,str) or not key.strip() or len(key)>500 or any(c.isspace() for c in key.strip()):
         raise ValueError('Gemini API 키를 확인하세요.')
-    if not isinstance(model,str) or not re.fullmatch(r'gemini-[A-Za-z0-9._-]{1,100}',model):
-        raise ValueError('gemini-로 시작하는 모델 ID를 입력하세요.')
+    if model != 'auto':
+        raise ValueError('모델 자동 선택 설정을 확인하세요.')
     if type(limit) is not int or not 1<=limit<=1000:raise ValueError('일일 요청 한도는 1~1000회로 설정하세요.')
 
 
-def save_settings(key,model,limit):
-    model=model.strip().removeprefix('models/')
+def save_settings(key):
+    model='auto';limit=DAILY_LIMIT
     if not key.strip():
         old=load_settings()
         key=old['key'] if old else ''
@@ -64,7 +68,7 @@ def request(payload):
         # Keep quotas across key/model changes; namespace cached responses by configuration.
         identity=hashlib.sha256((settings['model']+'\0'+settings['key']).encode()).hexdigest()
         gateway=Gateway(root()/'personal-ai-usage.sqlite3',{'personal':hashlib.sha256(identity.encode()).hexdigest()},
-                        lambda p:explain(settings['key'],settings['model'],p),settings['daily_limit'],settings['daily_limit'])
+                        lambda p:explain(settings['key'],select_model(settings['key']),p),settings['daily_limit'],settings['daily_limit'])
         data=dict(payload,request_id=hashlib.sha256((identity+payload['request_id']).encode()).hexdigest()[:32])
         return gateway.request('Bearer '+identity,data)
     except GatewayError as exc:
@@ -85,12 +89,11 @@ def render_settings():
         st.caption('키는 현재 Windows 계정으로 암호화하여 저장합니다. 같은 계정 권한의 프로그램까지 차단하지는 않습니다.')
         with st.form('personal_ai_settings'):
             key=st.text_input('Gemini API 키',type='password',key='personal_api_key',help='저장된 키는 표시하지 않습니다. 기존 키를 유지하려면 비워 두세요.')
-            model=st.text_input('Gemini 모델 ID',value=settings['model'] if settings else '',placeholder='본인 프로젝트에서 사용 가능한 gemini- 모델 ID',key='personal_model')
-            limit=st.number_input('하루 요청 한도',1,1000,settings['daily_limit'] if settings else 10,key='personal_limit')
+            st.caption('API 키만 입력하세요. 추천 생성 시 사용할 모델을 자동으로 선택합니다. 하루 최대 10회 요청할 수 있습니다.')
             st.caption('Google API 사용량·요금은 본인 프로젝트에 적용됩니다. 한국 시간 자정 기준이며 실패한 AI 호출도 차감될 수 있습니다.')
             if st.form_submit_button('API 설정 저장'):
                 try:
-                    save_settings(key,model,limit)
+                    save_settings(key)
                     st.session_state['personal_clear_key']=True
                     st.session_state.pop('ai_latest',None)
                     st.session_state.pop('ai_pending',None)
@@ -98,7 +101,7 @@ def render_settings():
                 except ValueError as exc:st.error(str(exc))
                 except OSError:st.error('설정을 저장하지 못했습니다. 저장 폴더 권한을 확인하세요.')
         if settings:
-            st.caption('저장된 모델: '+settings['model']+' · 키 입력 없이 다시 사용할 수 있습니다. 저장은 API 유효성 검사가 아닙니다.')
+            st.caption('API 키가 저장되었습니다. 다음 실행부터 다시 입력하지 않아도 됩니다. 연결은 추천 생성 시 확인합니다.')
             confirm=st.checkbox('저장된 API 설정을 삭제합니다.',key='personal_delete_confirm')
             if st.button('API 설정 삭제',disabled=not confirm):
                 delete_settings();st.session_state.pop('ai_pending',None);st.rerun()
